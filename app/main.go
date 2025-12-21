@@ -25,13 +25,6 @@ func main() {
 		fmt.Println("Failed to bind to port 6379")
 		os.Exit(1)
 	}
-	defer func() {
-		err = l.Close()
-		if err != nil {
-			// handle error
-			os.Exit(1)
-		}
-	}()
 
 	conn, err := l.Accept()
 	if err != nil {
@@ -39,15 +32,28 @@ func main() {
 		os.Exit(1)
 	}
 
-	for {
-		_, err = conn.Write([]byte("+PONG\r\n"))
+	defer func() {
+		err = l.Close()
 		if err != nil {
 			// handle error
-			err = conn.Close()
-			if err != nil {
-				// handle error
-				return
-			}
+			os.Exit(1)
+		}
+
+		err = conn.Close()
+		if err != nil {
+			// handle error
+			os.Exit(1)
+		}
+	}()
+
+	var buffer = make([]byte, 1024)
+	for {
+		if _, err = conn.Read(buffer); err != nil {
+			return
+		}
+
+		_, err = conn.Write([]byte("+PONG\r\n"))
+		if err != nil {
 			return
 		}
 	}
