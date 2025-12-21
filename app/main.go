@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"os"
 )
@@ -48,7 +49,11 @@ func main() {
 
 	var buffer = make([]byte, 1024)
 	for {
-		if _, err = conn.Read(buffer); err != nil {
+		// if _, err = conn.Read(buffer); err != nil {
+		// 	return
+		// }
+		// try io.EOF
+		if _, err = conn.Read(buffer); err == io.EOF {
 			return
 		}
 
