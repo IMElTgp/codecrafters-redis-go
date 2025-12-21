@@ -15,6 +15,30 @@ import (
 var _ = net.Listen
 var _ = os.Exit
 
+func handleConn(conn net.Conn) {
+	defer func() {
+		err := conn.Close()
+		if err != nil {
+			// handle error
+			return
+		}
+	}()
+
+	var buffer = make([]byte, 1024)
+
+	for {
+		if _, err := conn.Read(buffer); err == io.EOF {
+			return
+		}
+
+		_, err := conn.Write([]byte("+PONG\r\n"))
+		if err != nil {
+			// handle error
+			return
+		}
+	}
+}
+
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
@@ -27,39 +51,24 @@ func main() {
 		os.Exit(1)
 	}
 
-	conn, err := l.Accept()
-	if err != nil {
-		fmt.Println("Error accepting connection: ", err.Error())
-		os.Exit(1)
-	}
-
 	defer func() {
 		err = l.Close()
 		if err != nil {
 			// handle error
 			os.Exit(1)
 		}
-
-		err = conn.Close()
-		if err != nil {
-			// handle error
-			os.Exit(1)
-		}
 	}()
 
-	var buffer = make([]byte, 1024)
 	for {
 		// if _, err = conn.Read(buffer); err != nil {
 		// 	return
 		// }
 		// try io.EOF
-		if _, err = conn.Read(buffer); err == io.EOF {
-			return
-		}
-
-		_, err = conn.Write([]byte("+PONG\r\n"))
+		conn, err := l.Accept()
 		if err != nil {
+			// handle error
 			return
 		}
+		go handleConn(conn)
 	}
 }

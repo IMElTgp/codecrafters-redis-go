@@ -14,10 +14,10 @@ buffer := make([]byte, 1024) // 用于接收Read到的命令
 
 for {
 	// 没读到命令：退出循环
-	// 用io.EOF也行？
+	// 这里的err == io.EOF
 	if _, err = conn.Read(buffer); err != nil {
 		return
-    }
+	}
 
 	// 处理命令：发回硬编码的"+PONG\r\n"
 }
