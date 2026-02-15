@@ -140,17 +140,17 @@ func (c *Conn) runRPUSH(args []string) error {
 		return fmt.Errorf("RPUSH: bad argument count")
 	}
 
-	list, ok := lists.Load(args[1])
+	list, ok := lists.Load(args[0])
 	if !ok {
-		lists.Store(args[1], []any{})
-		list, _ = lists.Load(args[1])
+		lists.Store(args[0], []any{})
+		list, _ = lists.Load(args[0])
 	}
 	l, ok := list.([]any)
 	if !ok {
 		return fmt.Errorf("RPUSH: wrong list type")
 	}
 	l = append(l, args[1])
-	lists.Store(args[1], l)
+	lists.Store(args[0], l)
 	listLen := len(l)
 	_, err := c.Conn.Write([]byte(":" + strconv.Itoa(listLen) + "\r\n"))
 	if err != nil {
