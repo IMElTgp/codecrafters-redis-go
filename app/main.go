@@ -289,9 +289,6 @@ func (c *Conn) runLLEN(args []string) error {
 }
 
 func (c *Conn) runLPOP(args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("LPOP: argument count mismatch")
-	}
 
 	list, ok := lists.Load(args[0])
 	if !ok {
@@ -307,15 +304,30 @@ func (c *Conn) runLPOP(args []string) error {
 		return fmt.Errorf("LPOP: list type mismatch")
 	}
 
+	toPop, err := strconv.Atoi(args[1])
+	if err != nil {
+		// handle error
+		return err
+	}
+
 	// pop from left
-	defer func() {
+	/*defer func() {
 		lists.Store(args[0], l[1:])
 	}()
 	_, err := c.Conn.Write([]byte(serialize(l[0].(string))))
 	if err != nil {
 		// handle error
 		return err
+	}*/
+	for i := range toPop {
+		_, err := c.Conn.Write([]byte(serialize(l[0].(string))))
+		if err != nil {
+			// handle error
+			return err
+		}
+		l = l[1:]
 	}
+	lists.Store(args[0], l)
 
 	return nil
 }
@@ -430,26 +442,22 @@ func handleConn(conn net.Conn) {
 			}
 			switch strings.ToUpper(args[0]) {
 			case "PING":
-				err = c.runPING()
-				if err != nil {
+				if c.runPING() != nil {
 					// handle error
 					return
 				}
 			case "ECHO":
-				err = c.runECHO(args[1:])
-				if err != nil {
+				if c.runECHO(args[1:]) != nil {
 					// handle error
 					return
 				}
 			case "SET":
-				err = c.runSET(args[1:])
-				if err != nil {
+				if c.runSET(args[1:]) != nil {
 					// handle error
 					return
 				}
 			case "GET":
-				err = c.runGET(args[1:])
-				if err != nil {
+				if c.runGET(args[1:]) != nil {
 					// handle error
 					return
 				}
