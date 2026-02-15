@@ -28,10 +28,10 @@ func (c *Conn) runECHO(strs []string) error {
 		// _, err := c.Conn.Write([]byte(str))
 		var sendback []byte
 		sendback = append(sendback, '$')
+		sendback = append(sendback, []byte(strconv.Itoa(len(str)))...)
 		sendback = append(sendback, '\r')
 		sendback = append(sendback, '\n')
-
-		sendback = append(sendback, []byte(strconv.Itoa(len(str)))...)
+		sendback = append(sendback, []byte(str)...)
 		sendback = append(sendback, '\r')
 		sendback = append(sendback, '\n')
 		_, err := c.Conn.Write(sendback)
@@ -51,13 +51,14 @@ func parseArgs(msg string) (args []string, err error) {
 	// *<count>\r\n followed by that many elements
 	// for each element: $<len>\r\n<bytes>\r\n
 	// for example: *2\r\n$4\r\nECHO\r\n$6\r\nbanana\r\n
-	argCntBegin, argCntEnd := 0, 0
+	argCntBegin, argCntEnd := -1, -1
 	for i, b := range msg {
-		if b == '*' {
+		if b == '*' && argCntBegin == -1 {
 			argCntBegin = i + 1
 		}
-		if b == '\r' {
+		if b == '\r' && argCntEnd == -1 {
 			argCntEnd = i
+			break
 		}
 	}
 	argCnt, err := strconv.Atoi(msg[argCntBegin:argCntEnd])
@@ -69,7 +70,7 @@ func parseArgs(msg string) (args []string, err error) {
 	for i, b := range msg {
 		if b == '$' {
 			j := i
-			for msg[j] != '\r' {
+			for j < len(msg) && msg[j] != '\r' {
 				j++
 			}
 			argLen, err := strconv.Atoi(msg[i+1 : j])
@@ -78,8 +79,12 @@ func parseArgs(msg string) (args []string, err error) {
 				// handle error
 				return nil, fmt.Errorf("bad RESP array: syntax error")
 			}
+			// ensure framing
+			if msg[j:j+2] != "\r\n" || msg[j+2+argLen:j+4+argLen] != "\r\n" {
+				return nil, fmt.Errorf("bad RESP array: syntax error")
+			}
 
-			args = append(args, msg[j+2:j+4+argLen])
+			args = append(args, msg[j+2:j+2+argLen])
 		}
 	}
 
