@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -35,26 +36,35 @@ func (c *Conn) runECHO(strs []string) error {
 }
 
 // a RESP argument parser
-func parseArgs(msg string) (args []string) {
-	msg = strings.TrimSpace(msg)
-
-	msgLen := len(msg)
-	var arg string
-	for i := range msgLen {
-		if msg[i] == ' ' {
-			args = append(args, arg)
-			arg = ""
-			continue
-		}
-
-		arg += string(msg[i])
+func parseArgs(msg string) (args []string, err error) {
+	// msg = strings.TrimSpace(msg)
+	// general rule of REdis Serialization Protocol (RESP) array
+	// *<count>\r\n followed by that many elements
+	// for each element: $<len>\r\n<bytes>\r\n
+	// for example: *2\r\n$4\r\nECHO\r\n$6\r\nbanana\r\n
+	argCnt, err := strconv.Atoi(string(msg[1]))
+	if err != nil {
+		// handle error
+		return nil, fmt.Errorf("bad RESP array: syntax error")
 	}
 
-	if len(arg) > 0 {
-		args = append(args, arg)
+	for i, b := range msg {
+		if b == '$' {
+			argLen, err := strconv.Atoi(string(msg[i+1]))
+			// notice those \r's and \n's
+			if err != nil || len(msg) < i+6+argLen {
+				// handle error
+				return nil, fmt.Errorf("bad RESP array: syntax error")
+			}
+
+			args = append(args, msg[i+4:i+4+argLen])
+		}
+	}
+
+	if len(args) != argCnt {
+		return nil, fmt.Errorf("bad RESP array: argument count mismatch")
 	}
 	return
-
 }
 
 // working function which carries logics related to client serving
@@ -87,8 +97,12 @@ func handleConn(conn net.Conn) {
 
 		// parse args
 		// fmt.Println(string(buffer))
-		panic("this is buffer:" + string(buffer))
-		args := parseArgs(string(buffer))
+		// panic("this is buffer:" + string(buffer))
+		args, err := parseArgs(string(buffer))
+		if err != nil {
+			// handle error
+			return
+		}
 		switch strings.ToUpper(args[1]) {
 		case "PING":
 			c.runPING()
