@@ -3,21 +3,30 @@ package main
 import (
 	"fmt"
 	"io"
+	"math"
 	"net"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type Conn struct {
 	Conn net.Conn
 }
 
+// for expire time
+type Value struct {
+	Val string
+	Ex  time.Time
+}
+
 // a global hash map for GET & SET
 var variables sync.Map
 
-func serialization(str string) string {
+// tool function for string serialization
+func serialize(str string) string {
 	return "$" + strconv.Itoa(len(str)) + "\r\n" + str + "\r\n"
 }
 
@@ -33,17 +42,7 @@ func (c *Conn) runPING() error {
 
 func (c *Conn) runECHO(strs []string) error {
 	for _, str := range strs {
-		// _, err := c.Conn.Write([]byte(str))
-		/*var sendback []byte
-		sendback = append(sendback, '$')
-		sendback = append(sendback, []byte(strconv.Itoa(len(str)))...)
-		sendback = append(sendback, '\r')
-		sendback = append(sendback, '\n')
-		sendback = append(sendback, []byte(str)...)
-		sendback = append(sendback, '\r')
-		sendback = append(sendback, '\n')
-		_, err := c.Conn.Write(sendback)*/
-		_, err := c.Conn.Write([]byte(serialization(str)))
+		_, err := c.Conn.Write([]byte(serialize(str)))
 		if err != nil {
 			// handle error
 			return err
@@ -54,12 +53,33 @@ func (c *Conn) runECHO(strs []string) error {
 }
 
 func (c *Conn) runSET(args []string) error {
-	if len(args) != 2 {
+	if len(args) != 2 && len(args) != 4 {
 		return fmt.Errorf("bad RESP array: argument count mismatch")
 	}
 
-	variables.Store(args[0], args[1])
-	_, err := c.Conn.Write([]byte("+OK\r\n"))
+	// variables.Store(args[0], args[1])
+	expTime := 0
+	var err error
+	if len(args) == 4 {
+		expTime, err = strconv.Atoi(args[3])
+		if err != nil {
+			// handle error
+			return err
+		}
+	}
+
+	val := Value{args[1], time.Now()}
+	switch strings.ToUpper(args[2]) {
+	case "EX":
+		val.Ex.Add(time.Duration(expTime) * time.Second)
+	case "PX":
+		val.Ex.Add(time.Duration(expTime) * time.Millisecond)
+	default:
+		val.Ex.Add(time.Duration(math.MaxInt64) * time.Second)
+	}
+	variables.Store(args[0], val)
+
+	_, err = c.Conn.Write([]byte("+OK\r\n"))
 	if err != nil {
 		// handle error
 		return err
@@ -73,12 +93,34 @@ func (c *Conn) runGET(args []string) error {
 		return fmt.Errorf("bad RESP array: argument count mismatch")
 	}
 
-	if v, ok := variables.Load(args[0]); ok {
-		_, err := c.Conn.Write([]byte(serialization(v.(string))))
+	v, ok := variables.Load(args[0])
+	if !ok {
+		_, err := c.Conn.Write([]byte("$-1\r\n"))
 		if err != nil {
 			// handle error
 			return err
 		}
+		return nil
+	}
+
+	val, ok := v.(Value)
+	if !ok {
+		return fmt.Errorf("got bad type")
+	}
+	if time.Now().After(val.Ex) {
+		// expires
+		variables.Delete(args[0])
+		_, err := c.Conn.Write([]byte("$-1\r\n"))
+		if err != nil {
+			// handle error
+			return err
+		}
+		return nil
+	}
+	_, err := c.Conn.Write([]byte(serialize(val.Val)))
+	if err != nil {
+		// handle error
+		return err
 	}
 
 	return nil
@@ -228,10 +270,6 @@ func main() {
 	}()
 
 	for {
-		// if _, err = conn.Read(buffer); err != nil {
-		// 	return
-		// }
-		// try io.EOF
 		conn, err := l.Accept()
 		if err != nil {
 			// handle error
@@ -239,6 +277,7 @@ func main() {
 		}
 
 		// use goroutines to process multiple clients
+		// real redis uses event loop
 		go handleConn(conn)
 	}
 }
