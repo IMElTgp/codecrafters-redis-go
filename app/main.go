@@ -34,7 +34,7 @@ func (c *Conn) runPING() error {
 func (c *Conn) runECHO(strs []string) error {
 	for _, str := range strs {
 		// _, err := c.Conn.Write([]byte(str))
-		var sendback []byte
+		/*var sendback []byte
 		sendback = append(sendback, '$')
 		sendback = append(sendback, []byte(strconv.Itoa(len(str)))...)
 		sendback = append(sendback, '\r')
@@ -42,7 +42,8 @@ func (c *Conn) runECHO(strs []string) error {
 		sendback = append(sendback, []byte(str)...)
 		sendback = append(sendback, '\r')
 		sendback = append(sendback, '\n')
-		_, err := c.Conn.Write(sendback)
+		_, err := c.Conn.Write(sendback)*/
+		_, err := c.Conn.Write([]byte(serialization(str)))
 		if err != nil {
 			// handle error
 			return err
