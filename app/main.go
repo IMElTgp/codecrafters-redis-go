@@ -45,7 +45,7 @@ func (c *Conn) runECHO(strs []string) error {
 }
 
 // a RESP argument parser
-func parseArgs(msg string) (args []string, err error) {
+func parseArgs(msg string) (args []string, consumed int, err error) {
 	// msg = strings.TrimSpace(msg)
 	// general rule of REdis Serialization Protocol (RESP) array
 	// *<count>\r\n followed by that many elements
@@ -62,16 +62,17 @@ func parseArgs(msg string) (args []string, err error) {
 		}
 	}
 	if argCntEnd == -1 || argCntBegin == -1 {
-		return nil, fmt.Errorf("bad RESP array: syntax error")
+		return nil, 0, fmt.Errorf("bad RESP array: syntax error")
 	}
 
 	argCnt, err := strconv.Atoi(msg[argCntBegin:argCntEnd])
 	if err != nil {
 		// handle error
-		return nil, fmt.Errorf("bad RESP array: syntax error")
+		return nil, 0, fmt.Errorf("bad RESP array: syntax error")
 	}
 
-	for i := 0; i < len(msg); i++ {
+	i := 0
+	for i = 0; len(args) < argCnt && i < len(msg); i++ {
 		b := msg[i]
 		if b == '$' {
 			j := i
@@ -82,21 +83,24 @@ func parseArgs(msg string) (args []string, err error) {
 			// notice those \r's and \n's
 			if err != nil || len(msg) < j+4+argLen {
 				// handle error
-				return nil, fmt.Errorf("bad RESP array: syntax error")
+				return nil, 0, fmt.Errorf("bad RESP array: syntax error")
 			}
 			// ensure framing
 			if msg[j:j+2] != "\r\n" || msg[j+2+argLen:j+4+argLen] != "\r\n" {
-				return nil, fmt.Errorf("bad RESP array: syntax error")
+				return nil, 0, fmt.Errorf("bad RESP array: syntax error")
 			}
 
 			args = append(args, msg[j+2:j+2+argLen])
+			// skip to the next $-prefix to avoid direct visit to payload
+			// which avoids mishandling of nested '$'
 			i = j + 3 + argLen
 		}
 	}
 
 	if len(args) != argCnt {
-		return nil, fmt.Errorf("bad RESP array: argument count mismatch")
+		return nil, 0, fmt.Errorf("bad RESP array: argument count mismatch")
 	}
+	consumed = i
 	return
 }
 
@@ -131,9 +135,12 @@ func handleConn(conn net.Conn) {
 		// parse args
 		// fmt.Println(string(buffer))
 		// panic("this is buffer:" + string(buffer))
-		args, err := parseArgs(string(buffer[:n]))
+		args, _, err := parseArgs(string(buffer[:n]))
 		if err != nil {
 			// handle error
+			return
+		}
+		if len(args) == 0 {
 			return
 		}
 		switch strings.ToUpper(args[0]) {
