@@ -196,7 +196,7 @@ func (c *Conn) runLRANGE(args []string) error {
 		_, err = c.Conn.Write([]byte("*0\r\n"))
 		return fmt.Errorf("LRANGE: out of range")
 	}
-	rBoarder = int(math.Min(float64(rBoarder), float64(len(l))))
+	rBoarder = int(math.Min(float64(rBoarder), float64(len(l)-1)))
 
 	_, err = c.Conn.Write([]byte("*" + strconv.Itoa(rBoarder-lBoarder+1) + "\r\n"))
 	if err != nil {
