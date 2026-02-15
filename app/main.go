@@ -50,7 +50,16 @@ func parseArgs(msg string) (args []string, err error) {
 	// *<count>\r\n followed by that many elements
 	// for each element: $<len>\r\n<bytes>\r\n
 	// for example: *2\r\n$4\r\nECHO\r\n$6\r\nbanana\r\n
-	argCnt, err := strconv.Atoi(string(msg[1]))
+	argCntBegin, argCntEnd := 0, 0
+	for i := range msg {
+		if i == '*' {
+			argCntBegin = i + 1
+		}
+		if i == '\r' {
+			argCntEnd = i
+		}
+	}
+	argCnt, err := strconv.Atoi(msg[argCntBegin:argCntEnd])
 	if err != nil {
 		// handle error
 		return nil, fmt.Errorf("bad RESP array: syntax error")
@@ -111,7 +120,7 @@ func handleConn(conn net.Conn) {
 			// handle error
 			return
 		}
-		switch strings.ToUpper(args[1]) {
+		switch strings.ToUpper(args[0]) {
 		case "PING":
 			c.runPING()
 		case "ECHO":
