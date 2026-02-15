@@ -61,13 +61,18 @@ func parseArgs(msg string) (args []string, err error) {
 			break
 		}
 	}
+	if argCntEnd == -1 || argCntBegin == -1 {
+		return nil, fmt.Errorf("bad RESP array: syntax error")
+	}
+
 	argCnt, err := strconv.Atoi(msg[argCntBegin:argCntEnd])
 	if err != nil {
 		// handle error
 		return nil, fmt.Errorf("bad RESP array: syntax error")
 	}
 
-	for i, b := range msg {
+	for i := 0; i < len(msg); i++ {
+		b := msg[i]
 		if b == '$' {
 			j := i
 			for j < len(msg) && msg[j] != '\r' {
@@ -85,6 +90,7 @@ func parseArgs(msg string) (args []string, err error) {
 			}
 
 			args = append(args, msg[j+2:j+2+argLen])
+			i = j + 4 + argLen
 		}
 	}
 
