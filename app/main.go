@@ -190,6 +190,12 @@ func (c *Conn) runLRANGE(args []string) error {
 		// handle error
 		return err
 	}
+
+	// corner cases
+	if lBoarder >= len(l) || rBoarder >= len(l) {
+		return fmt.Errorf("LRANGE: out of range")
+	}
+
 	_, err = c.Conn.Write([]byte("*" + strconv.Itoa(rBoarder-lBoarder+1) + "\r\n"))
 	if err != nil {
 		// handle error
