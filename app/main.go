@@ -93,7 +93,7 @@ func handleConn(conn net.Conn) {
 		// 	return
 		// }
 
-		_, err := conn.Read(buffer)
+		n, err := conn.Read(buffer)
 		if err != nil {
 			// handle error
 			if err == io.EOF {
@@ -106,7 +106,7 @@ func handleConn(conn net.Conn) {
 		// parse args
 		// fmt.Println(string(buffer))
 		// panic("this is buffer:" + string(buffer))
-		args, err := parseArgs(string(buffer))
+		args, err := parseArgs(string(buffer[:n]))
 		if err != nil {
 			// handle error
 			return
