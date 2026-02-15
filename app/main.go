@@ -294,6 +294,10 @@ func handleConn(conn net.Conn) {
 					return
 				}
 			}
+			case "RPUSH":
+				if c.runRPUSH(args[1:]) != nil {
+					return
+			}
 			totalConsumed += consumed
 		}
 	}
