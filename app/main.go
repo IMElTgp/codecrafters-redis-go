@@ -5,16 +5,59 @@ import (
 	"io"
 	"net"
 	"os"
+	"strings"
 )
 
-// redis-written-in-go
-// Golang is perfect
-// IDK what the fuck Redis actually is
+type Conn struct {
+	Conn net.Conn
+}
 
-// Ensures gofmt doesn't remove the "net" and "os" imports in stage 1 (feel free to remove this!)
-var _ = net.Listen
-var _ = os.Exit
+func (c *Conn) runPING() error {
+	_, err := c.Conn.Write([]byte("+PONG\r\n"))
+	if err != nil {
+		// handle error
+		return err
+	}
 
+	return nil
+}
+
+func (c *Conn) runECHO(strs []string) error {
+	for _, str := range strs {
+		_, err := c.Conn.Write([]byte(str))
+		if err != nil {
+			// handle error
+			return err
+		}
+	}
+
+	return nil
+}
+
+// a RESP argument parser
+func parseArgs(msg string) (args []string) {
+	msg = strings.TrimSpace(msg)
+
+	msgLen := len(msg)
+	var arg string
+	for i := range msgLen {
+		if msg[i] == ' ' {
+			args = append(args, arg)
+			arg = ""
+			continue
+		}
+
+		arg += string(msg[i])
+	}
+
+	if len(arg) > 0 {
+		args = append(args, arg)
+	}
+	return
+
+}
+
+// working function which carries logics related to client serving
 func handleConn(conn net.Conn) {
 	defer func() {
 		err := conn.Close()
@@ -25,16 +68,30 @@ func handleConn(conn net.Conn) {
 	}()
 
 	var buffer = make([]byte, 1024)
+	c := &Conn{conn}
 
 	for {
-		if _, err := conn.Read(buffer); err == io.EOF {
-			return
-		}
+		// if _, err := conn.Read(buffer); err == io.EOF {
+		// 	return
+		// }
 
-		_, err := conn.Write([]byte("+PONG\r\n"))
+		_, err := conn.Read(buffer)
 		if err != nil {
 			// handle error
-			return
+			if err == io.EOF {
+				return
+			}
+
+			panic("err:" + err.Error())
+		}
+
+		// parse args
+		args := parseArgs(string(buffer))
+		switch strings.ToUpper(args[1]) {
+		case "PING":
+			c.runPING()
+		case "ECHO":
+			c.runECHO(args[2:])
 		}
 	}
 }
@@ -69,6 +126,8 @@ func main() {
 			// handle error
 			return
 		}
+
+		// use goroutines to process multiple clients
 		go handleConn(conn)
 	}
 }
