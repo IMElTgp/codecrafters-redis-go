@@ -143,6 +143,7 @@ func (c *Conn) runRPUSH(args []string) error {
 	list, ok := lists.Load(args[1])
 	if !ok {
 		lists.Store(args[1], []any{})
+		list, _ = lists.Load(args[1])
 	}
 	l, ok := list.([]any)
 	if !ok {
