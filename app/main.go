@@ -25,7 +25,15 @@ func (c *Conn) runPING() error {
 
 func (c *Conn) runECHO(strs []string) error {
 	for _, str := range strs {
-		_, err := c.Conn.Write([]byte(str))
+		// _, err := c.Conn.Write([]byte(str))
+		var sendback []byte
+		sendback = append(sendback, '$')
+		sendback = append(sendback, '\r')
+		sendback = append(sendback, '\n')
+		sendback = append(sendback, []byte(string(len(str)))...)
+		sendback = append(sendback, '\r')
+		sendback = append(sendback, '\n')
+		_, err := c.Conn.Write(sendback)
 		if err != nil {
 			// handle error
 			return err
