@@ -143,20 +143,20 @@ func (c *Conn) runRPUSH(args []string) error {
 	list, ok := lists.Load(args[1])
 	if !ok {
 		lists.Store(args[1], []any{})
-	} else {
-		l, ok := list.([]any)
-		if !ok {
-			return fmt.Errorf("RPUSH: wrong list type")
-		}
-		l = append(l, args[1])
-		lists.Store(args[1], l)
-		listLen := len(l)
-		_, err := c.Conn.Write([]byte(":" + strconv.Itoa(listLen) + "\r\n"))
-		if err != nil {
-			// handle error
-			return err
-		}
 	}
+	l, ok := list.([]any)
+	if !ok {
+		return fmt.Errorf("RPUSH: wrong list type")
+	}
+	l = append(l, args[1])
+	lists.Store(args[1], l)
+	listLen := len(l)
+	_, err := c.Conn.Write([]byte(":" + strconv.Itoa(listLen) + "\r\n"))
+	if err != nil {
+		// handle error
+		return err
+	}
+
 	return nil
 }
 
