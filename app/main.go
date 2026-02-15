@@ -433,6 +433,10 @@ func handleConn(conn net.Conn) {
 				if c.runLRANGE(args[1:]) != nil {
 					return
 				}
+			case "LLEN":
+				if c.runLLEN(args[1:]) != nil {
+					return
+				}
 			}
 
 			totalConsumed += consumed
