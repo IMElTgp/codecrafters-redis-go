@@ -163,6 +163,34 @@ func (c *Conn) runRPUSH(args []string) error {
 	return nil
 }
 
+func (c *Conn) runLPUSH(args []string) error {
+	if len(args) < 2 {
+		return fmt.Errorf("RPUSH: bad argument count")
+	}
+
+	list, ok := lists.Load(args[0])
+	if !ok {
+		lists.Store(args[0], []any{})
+		list, _ = lists.Load(args[0])
+	}
+	l, ok := list.([]any)
+	if !ok {
+		return fmt.Errorf("RPUSH: wrong list type")
+	}
+	for _, arg := range args[1:] {
+		l = append([]any{arg}, l...)
+	}
+	lists.Store(args[0], l)
+	listLen := len(l)
+	_, err := c.Conn.Write([]byte(":" + strconv.Itoa(listLen) + "\r\n"))
+	if err != nil {
+		// handle error
+		return err
+	}
+
+	return nil
+}
+
 func (c *Conn) runLRANGE(args []string) error {
 	if len(args) != 3 {
 		return fmt.Errorf("LRANGE: bad argument count")
@@ -198,6 +226,7 @@ func (c *Conn) runLRANGE(args []string) error {
 	// negative indices
 	if lBoarder < 0 {
 		lBoarder += len(l)
+		// out of range: treated as 0
 		if lBoarder < 0 {
 			lBoarder = 0
 		}
