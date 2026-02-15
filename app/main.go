@@ -30,7 +30,8 @@ func (c *Conn) runECHO(strs []string) error {
 		sendback = append(sendback, '$')
 		sendback = append(sendback, '\r')
 		sendback = append(sendback, '\n')
-		sendback = append(sendback, []byte(string(len(str)))...)
+
+		sendback = append(sendback, []byte(strconv.Itoa(len(str)))...)
 		sendback = append(sendback, '\r')
 		sendback = append(sendback, '\n')
 		_, err := c.Conn.Write(sendback)
@@ -51,11 +52,11 @@ func parseArgs(msg string) (args []string, err error) {
 	// for each element: $<len>\r\n<bytes>\r\n
 	// for example: *2\r\n$4\r\nECHO\r\n$6\r\nbanana\r\n
 	argCntBegin, argCntEnd := 0, 0
-	for i := range msg {
-		if i == '*' {
+	for i, b := range msg {
+		if b == '*' {
 			argCntBegin = i + 1
 		}
-		if i == '\r' {
+		if b == '\r' {
 			argCntEnd = i
 		}
 	}
@@ -67,15 +68,18 @@ func parseArgs(msg string) (args []string, err error) {
 
 	for i, b := range msg {
 		if b == '$' {
-			argLen, err := strconv.Atoi(string(msg[i+1]))
+			j := i
+			for msg[j] != '\r' {
+				j++
+			}
+			argLen, err := strconv.Atoi(msg[i+1 : j])
 			// notice those \r's and \n's
-			if err != nil || len(msg) < i+6+argLen {
+			if err != nil || len(msg) < j+4+argLen {
 				// handle error
 				return nil, fmt.Errorf("bad RESP array: syntax error")
 			}
 
-			args = append(args, msg[i+4:i+4+argLen])
-			i += 6 + argLen
+			args = append(args, msg[j+2:j+4+argLen])
 		}
 	}
 
@@ -121,7 +125,6 @@ func handleConn(conn net.Conn) {
 			// handle error
 			return
 		}
-		panic("first arg:" + args[0])
 		switch strings.ToUpper(args[0]) {
 		case "PING":
 			c.runPING()
