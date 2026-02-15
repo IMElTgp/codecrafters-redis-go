@@ -90,7 +90,7 @@ func parseArgs(msg string) (args []string, err error) {
 			}
 
 			args = append(args, msg[j+2:j+2+argLen])
-			// i = j + 4 + argLen
+			i = j + 3 + argLen
 		}
 	}
 
