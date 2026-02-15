@@ -121,7 +121,7 @@ func handleConn(conn net.Conn) {
 			// handle error
 			return
 		}
-		fmt.Println(args)
+		panic("first arg:" + args[0])
 		switch strings.ToUpper(args[0]) {
 		case "PING":
 			c.runPING()
