@@ -469,6 +469,10 @@ func handleConn(conn net.Conn) {
 				if c.runLLEN(args[1:]) != nil {
 					return
 				}
+			case "LPOP":
+				if c.runLPOP(args[1:]) != nil {
+					return
+				}
 			}
 
 			totalConsumed += consumed
