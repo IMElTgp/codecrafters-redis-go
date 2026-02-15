@@ -171,6 +171,8 @@ func (c *Conn) runLRANGE(args []string) error {
 	list, ok := lists.Load(args[0])
 	if !ok {
 		// return fmt.Errorf("LRANGE: no such list")
+		// here we should create a list
+		// like os.O_CREATE
 		lists.Store(args[0], []any{})
 		list, _ = lists.Load(args[0])
 	}
@@ -191,6 +193,14 @@ func (c *Conn) runLRANGE(args []string) error {
 	if err != nil {
 		// handle error
 		return err
+	}
+
+	// negative indices
+	if lBoarder < 0 {
+		lBoarder += len(l)
+	}
+	if rBoarder < 0 {
+		rBoarder += len(l)
 	}
 
 	// corner cases
