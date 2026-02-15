@@ -398,6 +398,10 @@ func handleConn(conn net.Conn) {
 				if c.runRPUSH(args[1:]) != nil {
 					return
 				}
+			case "LPUSH":
+				if c.runLPUSH(args[1:]) != nil {
+					return
+				}
 			case "LRANGE":
 				if c.runLRANGE(args[1:]) != nil {
 					return
