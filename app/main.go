@@ -7,10 +7,18 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 type Conn struct {
 	Conn net.Conn
+}
+
+// a global hash map for GET & SET
+var variables *sync.Map
+
+func serialization(str string) string {
+	return "$" + strconv.Itoa(len(str)) + "\r\n" + str + "\r\n"
 }
 
 func (c *Conn) runPING() error {
@@ -44,6 +52,37 @@ func (c *Conn) runECHO(strs []string) error {
 	return nil
 }
 
+func (c *Conn) runSET(args []string) error {
+	if len(args) != 2 {
+		return fmt.Errorf("bad RESP array: argument count mismatch")
+	}
+
+	variables.Store(args[0], args[1])
+	_, err := c.Conn.Write([]byte("+OK\r\n"))
+	if err != nil {
+		// handle error
+		return err
+	}
+
+	return nil
+}
+
+func (c *Conn) runGET(args []string) error {
+	if len(args) > 1 {
+		return fmt.Errorf("bad RESP array: argument count mismatch")
+	}
+
+	if v, ok := variables.Load(args[0]); ok {
+		_, err := c.Conn.Write([]byte(serialization(v.(string))))
+		if err != nil {
+			// handle error
+			return err
+		}
+	}
+
+	return nil
+}
+
 // a RESP argument parser
 func parseArgs(msg string) (args []string, consumed int, err error) {
 	// msg = strings.TrimSpace(msg)
@@ -51,6 +90,10 @@ func parseArgs(msg string) (args []string, consumed int, err error) {
 	// *<count>\r\n followed by that many elements
 	// for each element: $<len>\r\n<bytes>\r\n
 	// for example: *2\r\n$4\r\nECHO\r\n$6\r\nbanana\r\n
+	if msg[0] != '*' {
+		return nil, 0, fmt.Errorf("bad RESP array: syntax error")
+	}
+
 	argCntBegin, argCntEnd := -1, -1
 	for i, b := range msg {
 		if b == '*' && argCntBegin == -1 {
@@ -61,7 +104,7 @@ func parseArgs(msg string) (args []string, consumed int, err error) {
 			break
 		}
 	}
-	if argCntEnd == -1 || argCntBegin == -1 {
+	if argCntEnd == -1 || argCntBegin == -1 || argCntBegin >= argCntEnd {
 		return nil, 0, fmt.Errorf("bad RESP array: syntax error")
 	}
 
@@ -71,9 +114,18 @@ func parseArgs(msg string) (args []string, consumed int, err error) {
 		return nil, 0, fmt.Errorf("bad RESP array: syntax error")
 	}
 
+	if argCnt == 0 {
+		// *0\r\n
+		return []string{}, 4, nil
+	}
+
 	i := 0
-	for i = 0; len(args) < argCnt && i < len(msg); i++ {
+	for i = 1; len(args) < argCnt && i < len(msg); i++ {
 		b := msg[i]
+		if b == '*' {
+			// crossing of multiple commands
+			return nil, 0, fmt.Errorf("bad RESP array: syntax error")
+		}
 		if b == '$' {
 			j := i
 			for j < len(msg) && msg[j] != '\r' {
@@ -148,6 +200,10 @@ func handleConn(conn net.Conn) {
 			c.runPING()
 		case "ECHO":
 			c.runECHO(args[1:])
+		case "SET":
+			c.runSET(args[1:])
+		case "GET":
+			c.runGET(args[1:])
 		}
 	}
 }
