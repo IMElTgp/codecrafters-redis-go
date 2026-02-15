@@ -15,7 +15,7 @@ type Conn struct {
 }
 
 // a global hash map for GET & SET
-var variables *sync.Map
+var variables sync.Map
 
 func serialization(str string) string {
 	return "$" + strconv.Itoa(len(str)) + "\r\n" + str + "\r\n"
