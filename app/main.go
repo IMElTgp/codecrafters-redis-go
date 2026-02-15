@@ -75,7 +75,7 @@ func (c *Conn) runSET(args []string) error {
 	case "PX":
 		val.Ex.Add(time.Duration(expTime) * time.Millisecond)
 	default:
-		val.Ex.Add(time.Duration(math.MaxInt64) * time.Second)
+		val.Ex.Add(time.Duration(math.MaxInt32) * time.Second)
 	}
 	variables.Store(args[0], val)
 
