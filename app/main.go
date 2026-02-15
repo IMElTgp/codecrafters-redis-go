@@ -171,10 +171,6 @@ func handleConn(conn net.Conn) {
 	c := &Conn{conn}
 
 	for {
-		// if _, err := conn.Read(buffer); err == io.EOF {
-		// 	return
-		// }
-
 		n, err := conn.Read(buffer)
 		if err != nil {
 			// handle error
@@ -186,25 +182,26 @@ func handleConn(conn net.Conn) {
 		}
 
 		// parse args
-		// fmt.Println(string(buffer))
-		// panic("this is buffer:" + string(buffer))
-		args, _, err := parseArgs(string(buffer[:n]))
-		if err != nil {
-			// handle error
-			return
-		}
-		if len(args) == 0 {
-			return
-		}
-		switch strings.ToUpper(args[0]) {
-		case "PING":
-			c.runPING()
-		case "ECHO":
-			c.runECHO(args[1:])
-		case "SET":
-			c.runSET(args[1:])
-		case "GET":
-			c.runGET(args[1:])
+		totalConsumed := 0
+		for totalConsumed < len(buffer[:n]) {
+			args, _, err := parseArgs(string(buffer[totalConsumed:n]))
+			if err != nil {
+				// handle error
+				return
+			}
+			if len(args) == 0 {
+				return
+			}
+			switch strings.ToUpper(args[0]) {
+			case "PING":
+				c.runPING()
+			case "ECHO":
+				c.runECHO(args[1:])
+			case "SET":
+				c.runSET(args[1:])
+			case "GET":
+				c.runGET(args[1:])
+			}
 		}
 	}
 }
