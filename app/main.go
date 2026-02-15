@@ -124,7 +124,7 @@ func handleConn(conn net.Conn) {
 		case "PING":
 			c.runPING()
 		case "ECHO":
-			c.runECHO(args[2:])
+			c.runECHO(args[1:])
 		}
 	}
 }
