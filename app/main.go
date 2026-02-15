@@ -184,7 +184,7 @@ func handleConn(conn net.Conn) {
 		// parse args
 		totalConsumed := 0
 		for totalConsumed < len(buffer[:n]) {
-			args, _, err := parseArgs(string(buffer[totalConsumed:n]))
+			args, consumed, err := parseArgs(string(buffer[totalConsumed:n]))
 			if err != nil {
 				// handle error
 				return
@@ -202,6 +202,7 @@ func handleConn(conn net.Conn) {
 			case "GET":
 				c.runGET(args[1:])
 			}
+			totalConsumed += consumed
 		}
 	}
 }
