@@ -75,6 +75,7 @@ func parseArgs(msg string) (args []string, err error) {
 			}
 
 			args = append(args, msg[i+4:i+4+argLen])
+			i += 6 + argLen
 		}
 	}
 
@@ -120,6 +121,7 @@ func handleConn(conn net.Conn) {
 			// handle error
 			return
 		}
+		fmt.Println(args)
 		switch strings.ToUpper(args[0]) {
 		case "PING":
 			c.runPING()
