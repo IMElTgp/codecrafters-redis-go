@@ -136,7 +136,7 @@ func (c *Conn) runGET(args []string) error {
 }
 
 func (c *Conn) runRPUSH(args []string) error {
-	if len(args) != 2 {
+	if len(args) < 2 {
 		return fmt.Errorf("RPUSH: bad argument count")
 	}
 
@@ -149,7 +149,9 @@ func (c *Conn) runRPUSH(args []string) error {
 	if !ok {
 		return fmt.Errorf("RPUSH: wrong list type")
 	}
-	l = append(l, args[1])
+	for arg := range args[1:] {
+		l = append(l, arg)
+	}
 	lists.Store(args[0], l)
 	listLen := len(l)
 	_, err := c.Conn.Write([]byte(":" + strconv.Itoa(listLen) + "\r\n"))
