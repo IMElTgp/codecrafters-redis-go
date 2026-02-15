@@ -149,7 +149,7 @@ func (c *Conn) runRPUSH(args []string) error {
 	if !ok {
 		return fmt.Errorf("RPUSH: wrong list type")
 	}
-	for arg := range args[1:] {
+	for _, arg := range args[1:] {
 		l = append(l, arg)
 	}
 	lists.Store(args[0], l)
