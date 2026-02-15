@@ -317,7 +317,7 @@ func (c *Conn) runLPOP(args []string) error {
 		return err
 	}
 	for i := 0; i < toPop; i++ {
-		_, err = c.Conn.Write([]byte("$" + strconv.Itoa(len(l[0])) + "\r\n"))
+		_, err = c.Conn.Write([]byte("$" + strconv.Itoa(len(l[0].(string))) + "\r\n"))
 		if err != nil {
 			// handle error
 			return err
