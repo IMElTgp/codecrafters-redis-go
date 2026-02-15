@@ -86,6 +86,7 @@ func handleConn(conn net.Conn) {
 		}
 
 		// parse args
+		fmt.Println(string(buffer))
 		args := parseArgs(string(buffer))
 		switch strings.ToUpper(args[1]) {
 		case "PING":
