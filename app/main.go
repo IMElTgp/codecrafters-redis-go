@@ -170,7 +170,9 @@ func (c *Conn) runLRANGE(args []string) error {
 
 	list, ok := lists.Load(args[0])
 	if !ok {
-		return fmt.Errorf("LRANGE: no such list")
+		// return fmt.Errorf("LRANGE: no such list")
+		lists.Store(args[0], []any{})
+		list, _ = lists.Load(args[0])
 	}
 
 	l, ok := list.([]any)
