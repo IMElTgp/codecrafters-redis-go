@@ -16,7 +16,7 @@ type Conn struct {
 	Conn net.Conn
 }
 
-// for expire time
+// Value is for expire time registering
 type Value struct {
 	Val string
 	Ex  time.Time
@@ -24,6 +24,9 @@ type Value struct {
 
 // a global hash map for GET & SET
 var variables sync.Map
+
+// a global hash map for lists
+var lists sync.Map
 
 // tool function for string serialization
 func serialize(str string) string {
@@ -69,8 +72,10 @@ func (c *Conn) runSET(args []string) error {
 	}
 
 	val := Value{args[1], time.Now()}
+	// set expire time
 	if len(args) > 2 {
 		switch strings.ToUpper(args[2]) {
+		// AVOID val.Ex.Add(...)
 		case "EX":
 			val.Ex = time.Now().Add(time.Duration(expTime) * time.Second)
 		case "PX":
@@ -127,6 +132,31 @@ func (c *Conn) runGET(args []string) error {
 		return err
 	}
 
+	return nil
+}
+
+func (c *Conn) runRPUSH(args []string) error {
+	if len(args) != 2 {
+		return fmt.Errorf("RPUSH: bad argument count")
+	}
+
+	list, ok := lists.Load(args[1])
+	if !ok {
+		lists.Store(args[1], []any{})
+	} else {
+		l, ok := list.([]any)
+		if !ok {
+			return fmt.Errorf("RPUSH: wrong list type")
+		}
+		l = append(l, args[1])
+		lists.Store(args[1], l)
+		listLen := len(l)
+		_, err := c.Conn.Write([]byte(":" + strconv.Itoa(listLen) + "\r\n"))
+		if err != nil {
+			// handle error
+			return err
+		}
+	}
 	return nil
 }
 
@@ -240,13 +270,29 @@ func handleConn(conn net.Conn) {
 			}
 			switch strings.ToUpper(args[0]) {
 			case "PING":
-				c.runPING()
+				err = c.runPING()
+				if err != nil {
+					// handle error
+					return
+				}
 			case "ECHO":
-				c.runECHO(args[1:])
+				err = c.runECHO(args[1:])
+				if err != nil {
+					// handle error
+					return
+				}
 			case "SET":
-				c.runSET(args[1:])
+				err = c.runSET(args[1:])
+				if err != nil {
+					// handle error
+					return
+				}
 			case "GET":
-				c.runGET(args[1:])
+				err = c.runGET(args[1:])
+				if err != nil {
+					// handle error
+					return
+				}
 			}
 			totalConsumed += consumed
 		}
