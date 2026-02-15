@@ -196,10 +196,10 @@ func (c *Conn) runLRANGE(args []string) error {
 	}
 
 	// negative indices
-	if lBoarder < 0 {
+	for lBoarder < 0 {
 		lBoarder += len(l)
 	}
-	if rBoarder < 0 {
+	for rBoarder < 0 {
 		rBoarder += len(l)
 	}
 
