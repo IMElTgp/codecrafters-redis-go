@@ -191,6 +191,10 @@ func (c *Conn) runLRANGE(args []string) error {
 		return err
 	}
 	_, err = c.Conn.Write([]byte("*" + strconv.Itoa(rBoarder-lBoarder+1) + "\r\n"))
+	if err != nil {
+		// handle error
+		return err
+	}
 	for _, elem := range l[lBoarder : rBoarder+1] {
 		_, err = c.Conn.Write([]byte(serialize(elem.(string))))
 		if err != nil {
@@ -337,6 +341,10 @@ func handleConn(conn net.Conn) {
 				}
 			case "RPUSH":
 				if c.runRPUSH(args[1:]) != nil {
+					return
+				}
+			case "LRANGE":
+				if c.runLRANGE(args[1:]) != nil {
 					return
 				}
 			}
