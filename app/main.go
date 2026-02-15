@@ -261,6 +261,33 @@ func (c *Conn) runLRANGE(args []string) error {
 	return nil
 }
 
+func (c *Conn) runLLEN(args []string) error {
+	if len(args) != 2 {
+		return fmt.Errorf("LLEN: argument count mismatch")
+	}
+
+	list, ok := lists.Load(args[0])
+	if !ok {
+		_, err := c.Conn.Write([]byte(":0\r\n"))
+		if err != nil {
+			// handle error
+			return err
+		}
+	}
+
+	l, ok := list.([]any)
+	if !ok {
+		return fmt.Errorf("LLEN: list type mismatch")
+	}
+	_, err := c.Conn.Write([]byte(":" + strconv.Itoa(len(l)) + "\r\n"))
+	if err != nil {
+		// handle error
+		return err
+	}
+
+	return nil
+}
+
 // a RESP argument parser
 func parseArgs(msg string) (args []string, consumed int, err error) {
 	// msg = strings.TrimSpace(msg)
