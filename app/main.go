@@ -304,10 +304,16 @@ func (c *Conn) runLPOP(args []string) error {
 		return fmt.Errorf("LPOP: list type mismatch")
 	}
 
-	toPop, err := strconv.Atoi(args[1])
-	if err != nil {
-		// handle error
-		return err
+	var (
+		toPop = 1
+		err   error
+	)
+	if len(args) > 1 {
+		toPop, err = strconv.Atoi(args[1])
+		if err != nil {
+			// handle error
+			return err
+		}
 	}
 
 	// pop from left
