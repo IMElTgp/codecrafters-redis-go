@@ -163,6 +163,45 @@ func (c *Conn) runRPUSH(args []string) error {
 	return nil
 }
 
+func (c *Conn) runLRANGE(args []string) error {
+	if len(args) != 3 {
+		return fmt.Errorf("LRANGE: bad argument count")
+	}
+
+	list, ok := lists.Load(args[0])
+	if !ok {
+		return fmt.Errorf("LRANGE: no such list")
+	}
+
+	l, ok := list.([]any)
+	if !ok {
+		return fmt.Errorf("LRANGE: list type mismatch")
+	}
+
+	// usage: LRANGE l 0 2 -> get a RESP array that lists 3 elements of
+	// l beginning from index 0 and ending at index 2
+	lBoarder, err := strconv.Atoi(args[1])
+	if err != nil {
+		// handle error
+		return err
+	}
+	rBoarder, err := strconv.Atoi(args[2])
+	if err != nil {
+		// handle error
+		return err
+	}
+	_, err = c.Conn.Write([]byte("*" + strconv.Itoa(rBoarder-lBoarder+1) + "\r\n"))
+	for _, elem := range l[lBoarder : rBoarder+1] {
+		_, err = c.Conn.Write([]byte(serialize(elem.(string))))
+		if err != nil {
+			// handle error
+			return err
+		}
+	}
+
+	return nil
+}
+
 // a RESP argument parser
 func parseArgs(msg string) (args []string, consumed int, err error) {
 	// msg = strings.TrimSpace(msg)
