@@ -311,20 +311,17 @@ func (c *Conn) runLPOP(args []string) error {
 	}
 
 	// pop from left
-	/*defer func() {
-		lists.Store(args[0], l[1:])
-	}()
-	_, err := c.Conn.Write([]byte(serialize(l[0].(string))))
-	if err != nil {
-		// handle error
-		return err
-	}*/
-	_, err = c.Conn.Write([]byte("$" + strconv.Itoa(toPop) + "\r\n"))
+	_, err = c.Conn.Write([]byte("*" + strconv.Itoa(toPop) + "\r\n"))
 	if err != nil {
 		// handle error
 		return err
 	}
 	for i := 0; i < toPop; i++ {
+		_, err = c.Conn.Write([]byte("$" + strconv.Itoa(len(l[0])) + "\r\n"))
+		if err != nil {
+			// handle error
+			return err
+		}
 		_, err = c.Conn.Write([]byte(serialize(l[0].(string))))
 		if err != nil {
 			// handle error
