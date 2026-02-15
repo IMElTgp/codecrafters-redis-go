@@ -71,11 +71,13 @@ func (c *Conn) runSET(args []string) error {
 	val := Value{args[1], time.Now()}
 	switch strings.ToUpper(args[2]) {
 	case "EX":
-		val.Ex.Add(time.Duration(expTime) * time.Second)
+		val.Ex = time.Now().Add(time.Duration(expTime) * time.Second)
 	case "PX":
-		val.Ex.Add(time.Duration(expTime) * time.Millisecond)
+
+		val.Ex = time.Now().Add(time.Duration(expTime) * time.Millisecond)
 	default:
-		val.Ex.Add(time.Duration(math.MaxInt32) * time.Second)
+
+		val.Ex = time.Now().Add(time.Duration(math.MaxInt32) * time.Second)
 	}
 	variables.Store(args[0], val)
 
