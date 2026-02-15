@@ -317,10 +317,12 @@ func (c *Conn) runLPOP(args []string) error {
 	}
 
 	// pop from left
-	_, err = c.Conn.Write([]byte("*" + strconv.Itoa(toPop) + "\r\n"))
-	if err != nil {
-		// handle error
-		return err
+	if len(args) > 1 {
+		_, err = c.Conn.Write([]byte("*" + strconv.Itoa(toPop) + "\r\n"))
+		if err != nil {
+			// handle error
+			return err
+		}
 	}
 	for i := 0; i < toPop; i++ {
 		_, err = c.Conn.Write([]byte(serialize(l[0].(string))))
