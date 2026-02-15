@@ -288,6 +288,38 @@ func (c *Conn) runLLEN(args []string) error {
 	return nil
 }
 
+func (c *Conn) runLPOP(args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("LPOP: argument count mismatch")
+	}
+
+	list, ok := lists.Load(args[0])
+	if !ok {
+		_, err := c.Conn.Write([]byte("$-1\r\n"))
+		if err != nil {
+			// handle error
+			return err
+		}
+	}
+
+	l, ok := list.([]any)
+	if !ok {
+		return fmt.Errorf("LPOP: list type mismatch")
+	}
+
+	// pop from left
+	defer func() {
+		lists.Store(args[0], l[1:])
+	}()
+	_, err := c.Conn.Write([]byte(serialize(l[0].(string))))
+	if err != nil {
+		// handle error
+		return err
+	}
+
+	return nil
+}
+
 // a RESP argument parser
 func parseArgs(msg string) (args []string, consumed int, err error) {
 	// msg = strings.TrimSpace(msg)
