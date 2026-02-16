@@ -34,6 +34,21 @@ var mu sync.Mutex
 // a global hash map for notifying BLPOP
 var notify sync.Map // Map[string]chan struct{}
 
+// tool function for getting list copy from Map
+func getCopy(key string) ([]any, error) {
+	list, ok := lists.Load(key)
+	if !ok {
+		lists.Store(key, []any{})
+		list, _ = lists.Load(key)
+	}
+	l, ok := list.([]any)
+	if !ok {
+		return nil, fmt.Errorf("list type mismatch")
+	}
+	cp := append([]any(nil), l...)
+	return cp, nil
+}
+
 // tool function for getting channel
 func getCh(key string) chan struct{} {
 	if v, ok := notify.Load(key); ok {
@@ -443,23 +458,44 @@ func (c *Conn) runBLPOP(args []string) error {
 
 retryOnEmpty:
 	mu.Lock()
+	cp, err := getCopy(args[0])
+	if err != nil {
+		// handle error
+		mu.Unlock()
+		return err
+	}
+
 	ch := getCh(args[0])
+	if len(cp) != 0 {
+		// initial check passed
+		// ignore select block and do popping
+		toPop := cp[0].(string)
+		cp = cp[1:]
+		lists.Store(args[0], cp)
+		mu.Unlock()
+		if len(cp) == 0 {
+			// set channel
+			select {
+			case <-ch:
+			default:
+			}
+		}
+		_, err = c.Conn.Write([]byte("*2\r\n"))
+		if err != nil {
+			// handle error
+			return err
+		}
+		_, err = c.Conn.Write([]byte(serialize(args[0]) + serialize(toPop)))
+		return err
+	}
 
 	select {
 	case <-ch:
-		// pop
-		list, ok := lists.Load(args[0])
-		if !ok {
-			lists.Store(args[0], []any{})
-			list, _ = lists.Load(args[0])
+		cp, err = getCopy(args[0])
+		if err != nil {
+			// handle error
+			return err
 		}
-		l, ok := list.([]any)
-		if !ok {
-			mu.Unlock()
-			return fmt.Errorf("BLPOP: list type mismatch")
-		}
-		// copy that slice
-		cp := append([]any(nil), l...)
 		// check race condition: if some goroutines pop first
 		if len(cp) == 0 {
 			mu.Unlock()
