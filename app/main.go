@@ -488,9 +488,11 @@ retryOnEmpty:
 		_, err = c.Conn.Write([]byte(serialize(args[0]) + serialize(toPop)))
 		return err
 	}
+	mu.Unlock()
 
 	select {
 	case <-ch:
+		mu.Lock()
 		cp, err = getCopy(args[0])
 		if err != nil {
 			// handle error
