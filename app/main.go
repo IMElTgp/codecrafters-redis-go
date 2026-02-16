@@ -447,12 +447,13 @@ func (c *Conn) runBLPOP(args []string) error {
 		return fmt.Errorf("BLPOP: argument count mismatch")
 	}
 
-	timeout, err := strconv.Atoi(args[1])
+	timeout, err := strconv.ParseFloat(args[1], 64)
 	if err != nil {
 		// handle error
 		return err
 	}
-	if timeout == 0 {
+	const EPS = 1e-6
+	if timeout < EPS {
 		// indefinite timeout
 		timeout = math.MaxInt32
 	}
@@ -529,7 +530,7 @@ retryOnEmpty:
 			// handle error
 			return err
 		}
-	case <-time.After(time.Duration(timeout) * time.Second):
+	case <-time.After(time.Duration(100*timeout) / 100 * time.Second):
 		// timeout, return null array
 		_, err = c.Conn.Write([]byte("*-1\r\n"))
 		if err != nil {
