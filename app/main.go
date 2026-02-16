@@ -513,7 +513,10 @@ retryOnEmpty:
 		// check if cp is still not empty after popping
 		if len(cp) != 0 {
 			// if so, fill the channel for further popping
-			ch <- struct{}{}
+			select {
+			case ch <- struct{}{}:
+			default:
+			}
 		}
 		// encode the RESP array
 		_, err = c.Conn.Write([]byte("*2\r\n"))
@@ -685,6 +688,10 @@ func handleConn(conn net.Conn) {
 				}
 			case "LPOP":
 				if c.runLPOP(args[1:]) != nil {
+					return
+				}
+			case "BLPOP":
+				if c.runBLPOP(args[1:]) != nil {
 					return
 				}
 			}
