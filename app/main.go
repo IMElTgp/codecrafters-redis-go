@@ -179,32 +179,33 @@ func (c *Conn) runRPUSH(args []string) error {
 	}
 
 	mu.Lock()
-	list, ok := lists.Load(args[0])
-	if !ok {
-		lists.Store(args[0], []any{})
-		list, _ = lists.Load(args[0])
+	cp, err := getCopy(args[0])
+	if err != nil {
+		// handle error
+		mu.Unlock()
+		return err
 	}
 
-	l, ok := list.([]any)
-	if !ok {
-		mu.Unlock()
-		return fmt.Errorf("RPUSH: wrong list type")
-	}
+	appended := false
 
 	for _, arg := range args[1:] {
-		l = append(l, arg)
-		ch := getCh(args[0])
+		cp = append(cp, arg)
+		appended = true
+	}
+
+	lists.Store(args[0], cp)
+	listLen := len(cp)
+	ch := getCh(args[0])
+	mu.Unlock()
+
+	if appended {
 		select {
 		case ch <- struct{}{}:
 		default:
 		}
 	}
 
-	lists.Store(args[0], l)
-	listLen := len(l)
-	mu.Unlock()
-
-	_, err := c.Conn.Write([]byte(":" + strconv.Itoa(listLen) + "\r\n"))
+	_, err = c.Conn.Write([]byte(":" + strconv.Itoa(listLen) + "\r\n"))
 	if err != nil {
 		// handle error
 		return err
@@ -219,32 +220,31 @@ func (c *Conn) runLPUSH(args []string) error {
 	}
 
 	mu.Lock()
-	list, ok := lists.Load(args[0])
-	if !ok {
-		lists.Store(args[0], []any{})
-		list, _ = lists.Load(args[0])
-	}
-
-	l, ok := list.([]any)
-	if !ok {
+	cp, err := getCopy(args[0])
+	if err != nil {
+		// handle error
 		mu.Unlock()
-		return fmt.Errorf("RPUSH: wrong list type")
+		return err
+	}
+	ch := getCh(args[0])
+	appended := false
+	for _, arg := range args[1:] {
+		cp = append([]any{arg}, cp...)
+		appended = true
 	}
 
-	for _, arg := range args[1:] {
-		l = append([]any{arg}, l...)
-		ch := getCh(args[0])
+	lists.Store(args[0], cp)
+	listLen := len(cp)
+	mu.Unlock()
+
+	if appended {
 		select {
 		case ch <- struct{}{}:
 		default:
 		}
 	}
 
-	lists.Store(args[0], l)
-	listLen := len(l)
-	mu.Unlock()
-
-	_, err := c.Conn.Write([]byte(":" + strconv.Itoa(listLen) + "\r\n"))
+	_, err = c.Conn.Write([]byte(":" + strconv.Itoa(listLen) + "\r\n"))
 	if err != nil {
 		// handle error
 		return err
@@ -410,17 +410,18 @@ func (c *Conn) runLPOP(args []string) error {
 		//}
 		popped = append(popped, cp[0].(string))
 		cp = cp[1:]
-		if len(cp) == 0 {
-			ch := getCh(args[0])
-			select {
-			case <-ch:
-			default:
-			}
-		}
+
 	}
 	lists.Store(args[0], cp)
+	ch := getCh(args[0])
 	mu.Unlock()
 
+	if len(cp) == 0 {
+		select {
+		case <-ch:
+		default:
+		}
+	}
 	// if len(args) > 1 we need to write array instead of bulk string
 	if len(args) > 1 {
 		_, err = c.Conn.Write([]byte("*" + strconv.Itoa(toPop) + "\r\n"))
