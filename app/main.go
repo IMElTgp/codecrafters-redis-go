@@ -436,6 +436,10 @@ func (c *Conn) runBLPOP(args []string) error {
 		// handle error
 		return err
 	}
+	if timeout == 0 {
+		// indefinite timeout
+		timeout = math.MaxInt32
+	}
 
 	ch := getCh(args[0])
 
@@ -465,14 +469,14 @@ func (c *Conn) runBLPOP(args []string) error {
 		// pop one element
 		toPop := cp[0]
 		cp = cp[1:]
+		// store back the list after popping
+		lists.Store(args[0], cp)
+		mu.Unlock()
 		// check if cp is still not empty after popping
 		if len(cp) != 0 {
 			// if so, fill the channel for further popping
 			ch <- struct{}{}
 		}
-		// store back the list after popping
-		lists.Store(args[0], cp)
-		mu.Unlock()
 		// encode the RESP array
 		_, err = c.Conn.Write([]byte("*2\r\n"))
 		if err != nil {
