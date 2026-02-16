@@ -530,7 +530,7 @@ retryOnEmpty:
 			// handle error
 			return err
 		}
-	case <-time.After(time.Duration(100*timeout) / 100 * time.Second):
+	case <-time.After(time.Duration(1000*timeout) * time.Millisecond):
 		// timeout, return null array
 		_, err = c.Conn.Write([]byte("*-1\r\n"))
 		if err != nil {
