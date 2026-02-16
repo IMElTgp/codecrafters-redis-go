@@ -441,19 +441,13 @@ func (c *Conn) runBLPOP(args []string) error {
 		timeout = math.MaxInt32
 	}
 
+retryOnEmpty:
+	mu.Lock()
 	ch := getCh(args[0])
 
 	select {
-	case <-time.After(time.Duration(timeout) * time.Second):
-		// timeout, return null array
-		_, err = c.Conn.Write([]byte("*-1\r\n"))
-		if err != nil {
-			// handle error
-			return err
-		}
 	case <-ch:
 		// pop
-		mu.Lock()
 		list, ok := lists.Load(args[0])
 		if !ok {
 			lists.Store(args[0], []any{})
@@ -466,6 +460,11 @@ func (c *Conn) runBLPOP(args []string) error {
 		}
 		// copy that slice
 		cp := append([]any(nil), l...)
+		// check race condition: if some goroutines pop first
+		if len(cp) == 0 {
+			mu.Unlock()
+			goto retryOnEmpty
+		}
 		// pop one element
 		toPop := cp[0]
 		cp = cp[1:]
@@ -484,6 +483,13 @@ func (c *Conn) runBLPOP(args []string) error {
 			return err
 		}
 		_, err = c.Conn.Write([]byte(serialize(args[0]) + serialize(toPop.(string))))
+		if err != nil {
+			// handle error
+			return err
+		}
+	case <-time.After(time.Duration(timeout) * time.Second):
+		// timeout, return null array
+		_, err = c.Conn.Write([]byte("*-1\r\n"))
 		if err != nil {
 			// handle error
 			return err
