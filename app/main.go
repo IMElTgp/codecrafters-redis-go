@@ -827,6 +827,9 @@ func (c *Conn) runXRANGE(args []string) error {
 	if !strings.Contains(args[1], "-") {
 		endID += "-" + strconv.FormatInt(math.MaxInt64, 10)
 	}
+	if startID == "-" {
+		startID = "0-1"
+	}
 	// binary search the bounds
 	lo := sort.Search(len(stream), func(i int) bool {
 		return cmpID(stream[i].id, startID) >= 0
