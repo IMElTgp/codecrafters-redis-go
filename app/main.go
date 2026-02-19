@@ -630,6 +630,10 @@ func splitID(id string) (tm, no int, err error) {
 
 // checkID checks an entry's id for runXADD
 func checkID(id string, topElem Entry) int {
+	if id == "*" {
+		return FULL_AUTO
+	}
+
 	topTime, topNo, err := splitID(topElem.id)
 	if err != nil {
 		return UNKNOWN_ERROR
@@ -708,7 +712,7 @@ func (c *Conn) runXADD(args []string) error {
 	}*/
 	tm, no, err := splitID(args[1])
 	if err != nil {
-		if !strings.HasSuffix(args[1], "-*") {
+		if !strings.HasSuffix(args[1], "-*") && args[1] != "*" {
 			mu.Unlock()
 			// handle error
 			return err
@@ -728,6 +732,22 @@ func (c *Conn) runXADD(args []string) error {
 		return fmt.Errorf("XADD: Unknown errors happened")
 	case PARTIAL_AUTO:
 		// partially auto-implement
+		topTime, topNo, err := splitID(topElem.id)
+		if err != nil {
+			// handle error
+			mu.Unlock()
+			return err
+		}
+		if topTime == tm {
+			// no = topNo + 1
+			no = topNo + 1
+		} else {
+			no = 0
+		}
+	case FULL_AUTO:
+		// fully auto-implement
+		tm = int(time.Now().UnixMilli())
+
 		topTime, topNo, err := splitID(topElem.id)
 		if err != nil {
 			// handle error
