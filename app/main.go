@@ -622,7 +622,7 @@ func checkID(id string, topElem Entry) (valid int) {
 
 	if topElem.kv == nil {
 		// `stream` is empty
-		if no <= 0 {
+		if no <= 0 || tm == 0 && no == 0 {
 			return INVALID_NO
 		}
 		return SUCCESS
