@@ -1028,6 +1028,10 @@ func handleConn(conn net.Conn) {
 				if c.runXADD(args[1:]) != nil {
 					return
 				}
+			case "XRANGE":
+				if c.runXRANGE(args[1:]) != nil {
+					return
+				}
 			}
 
 			totalConsumed += consumed
