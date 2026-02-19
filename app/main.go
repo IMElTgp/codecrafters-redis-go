@@ -22,11 +22,29 @@ type Value struct {
 	Ex  time.Time
 }
 
+// KV is for entry content
+type KV struct {
+	key   string
+	value string
+}
+
+// Entry is for entry type
+type Entry struct {
+	id string
+	kv []KV
+}
+
+// Stream is type stream
+type Stream []Entry
+
 // a global hash map for GET & SET
 var variables sync.Map
 
 // a global hash map for lists
 var lists sync.Map
+
+// a global has map for streams
+var streams sync.Map
 
 // a global mutex to ensure concurrency-safety
 var mu sync.Mutex
@@ -60,7 +78,7 @@ func getCh(key string) chan struct{} {
 	return v.(chan struct{})
 }
 
-// tool function for string serialization
+// tool function for string serialization (return a bulk string)
 func serialize(str string) string {
 	return "$" + strconv.Itoa(len(str)) + "\r\n" + str + "\r\n"
 }
@@ -548,6 +566,8 @@ func (c *Conn) runTYPE(args []string) error {
 	}
 
 	mu.Lock()
+
+	// check if args[0] is of type string
 	_, ok := variables.Load(args[0])
 	if ok {
 		mu.Unlock()
@@ -555,9 +575,55 @@ func (c *Conn) runTYPE(args []string) error {
 		return err
 	}
 
+	// check if args[0] is of type stream
+	_, ok = streams.Load(args[0])
+	if ok {
+		mu.Unlock()
+		_, err := c.Conn.Write([]byte("+stream\r\n"))
+		return err
+	}
+
 	mu.Unlock()
+	// doesn't exist
 	_, err := c.Conn.Write([]byte("+none\r\n"))
 
+	return err
+}
+
+func (c *Conn) runXADD(args []string) error {
+	if len(args) < 2 {
+		return fmt.Errorf("XADD: lacking argument(s)")
+	}
+	if len(args)%2 != 0 {
+		return fmt.Errorf("XADD: wrong argument format")
+	}
+
+	mu.Lock()
+	// record all key-value pairs
+	var kvs []KV
+	for i := 2; i < len(args) && i+1 < len(args); i += 2 {
+		kvs = append(kvs, KV{args[i], args[i+1]})
+	}
+
+	// append these pairs to stream
+	stream, ok := streams.Load(args[0])
+	if !ok {
+		// if the stream does not exist, create it
+		streams.Store(args[0], Stream{})
+		stream, _ = streams.Load(args[0])
+	}
+
+	cp, ok := stream.(Stream)
+	if !ok {
+		// stream is of wrong type
+		mu.Unlock()
+		return fmt.Errorf("XADD: stream type mismatch")
+	}
+	cp = append(cp, Entry{args[1], kvs})
+	streams.Store(args[0], cp)
+	mu.Unlock()
+
+	_, err := c.Conn.Write([]byte(serialize(args[1])))
 	return err
 }
 
