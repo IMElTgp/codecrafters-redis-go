@@ -643,7 +643,6 @@ func checkID(id string, topElem Entry) int {
 	}*/
 	topTime, topNo, err := splitID(topElem.id)
 	if err != nil {
-		// handle error
 		return UNKNOWN_ERROR
 	}
 	// split ID by -
@@ -666,9 +665,6 @@ func checkID(id string, topElem Entry) int {
 
 	if topElem.kv == nil {
 		// `stream` is empty
-		if no <= 0 {
-			return INVALID_NO
-		}
 		return SUCCESS
 	}
 	// topTime should not be larger than tm
