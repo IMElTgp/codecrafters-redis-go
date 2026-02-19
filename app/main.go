@@ -593,33 +593,73 @@ func (c *Conn) runTYPE(args []string) error {
 // two types of invalid ID and other faults
 const (
 	TIME_NO_MISMATCH = iota
-	INVALID_NO
+	INVALID_NO       // 0-0
 	SYNTAX_ERROR
 	UNKNOWN_ERROR
 	// SUCCESS is success code
 	SUCCESS
 )
 
-// checkID checks an entry's id for runXADD
-func checkID(id string, topElem Entry) (valid int) {
-	// split ID by -
-	// [NOT IMPLEMENTED] only for explicit ID of format xxxx-yyyy
+// auto-complete
+const (
+	// no. needs to be auto-completed
+	PARTIAL_AUTO = 5
+	// time and no. both need auto-completion
+	FULL_AUTO = 6
+)
+
+// splitID returns the timestamp and number of an ID
+func splitID(id string) (tm, no int, err error) {
 	parts := strings.Split(id, "-")
 	if len(parts) != 2 {
+		// invalid format
+		return -1, -1, fmt.Errorf("SYNTAX ERROR in ID")
+	}
+	tm, err = strconv.Atoi(parts[0])
+	if err != nil {
+		// handle error
+		return -1, -1, err
+	}
+	no, err = strconv.Atoi(parts[1])
+	if err != nil {
+		// handle error
+		return -1, -1, err
+	}
+	return tm, no, nil
+}
+
+// checkID checks an entry's id for runXADD
+func checkID(id string, topElem Entry) int {
+	/*topParts := strings.Split(topElem.id, "-")
+	topTime, err := strconv.Atoi(topParts[0])
+	if err != nil {
+		// handle error
+		return UNKNOWN_ERROR
+	}
+	topNo, err := strconv.Atoi(topParts[1])
+	if err != nil {
+		// handle error
+		return UNKNOWN_ERROR
+	}*/
+	topTime, topNo, err := splitID(topElem.id)
+	if err != nil {
+		// handle error
+		return UNKNOWN_ERROR
+	}
+	// split ID by -
+	// [NOT IMPLEMENTED] only for explicit ID of format xxxx-yyyy
+	tm, no, err := splitID(id)
+	if err != nil {
+		if strings.HasSuffix(id, "-*") && tm >= topTime {
+			// needs partially auto completion
+			return PARTIAL_AUTO
+		} else if strings.HasSuffix(id, "-*") && tm < topTime {
+			return TIME_NO_MISMATCH
+		}
+		// handle error
 		return SYNTAX_ERROR
 	}
-
-	tm, err := strconv.Atoi(parts[0])
-	if err != nil {
-		// handle error
-		return UNKNOWN_ERROR
-	}
-	no, err := strconv.Atoi(parts[1])
-	if err != nil {
-		// handle error
-		return UNKNOWN_ERROR
-	}
-
+	// id: 0-0 is invalid
 	if tm == 0 && no == 0 {
 		return INVALID_NO
 	}
@@ -630,18 +670,6 @@ func checkID(id string, topElem Entry) (valid int) {
 			return INVALID_NO
 		}
 		return SUCCESS
-	}
-
-	topParts := strings.Split(topElem.id, "-")
-	topTime, err := strconv.Atoi(topParts[0])
-	if err != nil {
-		// handle error
-		return UNKNOWN_ERROR
-	}
-	topNo, err := strconv.Atoi(topParts[1])
-	if err != nil {
-		// handle error
-		return UNKNOWN_ERROR
 	}
 	// topTime should not be larger than tm
 	// if equal, topNo should not be larger than no
@@ -693,6 +721,14 @@ func (c *Conn) runXADD(args []string) error {
 		_, err := c.Conn.Write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"))
 		return err
 	}*/
+	tm, no, err := splitID(args[1])
+	if err != nil {
+		if !strings.HasSuffix(args[1], "-*") {
+			mu.Unlock()
+			// handle error
+			return err
+		}
+	}
 	switch checkID(args[1], topElem) {
 	case TIME_NO_MISMATCH:
 		mu.Unlock()
@@ -705,13 +741,28 @@ func (c *Conn) runXADD(args []string) error {
 	case UNKNOWN_ERROR:
 		mu.Unlock()
 		return fmt.Errorf("XADD: Unknown errors happened")
+	case PARTIAL_AUTO:
+		// partially auto-implement
+		topTime, topNo, err := splitID(topElem.id)
+		if err != nil {
+			// handle error
+			mu.Unlock()
+			return err
+		}
+		if topTime == tm {
+			// no = topNo + 1
+			no = topNo + 1
+		} else {
+			no = 0
+		}
 	default:
 	}
-	cp = append(cp, Entry{args[1], kvs})
+	id := strconv.Itoa(tm) + "-" + strconv.Itoa(no)
+	cp = append(cp, Entry{id, kvs})
 	streams.Store(args[0], cp)
 	mu.Unlock()
 	// write back the entry id
-	_, err := c.Conn.Write([]byte(serialize(args[1])))
+	_, err = c.Conn.Write([]byte(serialize(args[1])))
 	return err
 }
 
