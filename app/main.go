@@ -712,6 +712,7 @@ func (c *Conn) runXADD(args []string) error {
 	}*/
 	tm, no, err := splitID(args[1])
 	if err != nil {
+		// skip auto-complements
 		if !strings.HasSuffix(args[1], "-*") && args[1] != "*" {
 			mu.Unlock()
 			// handle error
@@ -746,6 +747,7 @@ func (c *Conn) runXADD(args []string) error {
 		}
 	case FULL_AUTO:
 		// fully auto-implement
+		// tm <- current unix time (millisecond)
 		tm = int(time.Now().UnixMilli())
 
 		topTime, topNo, err := splitID(topElem.id)
