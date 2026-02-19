@@ -825,9 +825,11 @@ func (c *Conn) runXRANGE(args []string) error {
 		startID += "-0"
 	}
 	if !strings.Contains(args[1], "-") {
+		// endID may be "+", which means the upper bound is the very end of the stream
 		endID += "-" + strconv.FormatInt(math.MaxInt64, 10)
 	}
 	if startID == "-" {
+		// "-" means the lower bound is the very beginning of the stream
 		startID = "0-1"
 	}
 	// binary search the bounds
