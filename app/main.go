@@ -747,7 +747,7 @@ func (c *Conn) runXADD(args []string) error {
 	streams.Store(args[0], cp)
 	mu.Unlock()
 	// write back the entry id
-	_, err = c.Conn.Write([]byte(serialize(args[1])))
+	_, err = c.Conn.Write([]byte(serialize(id)))
 	return err
 }
 
