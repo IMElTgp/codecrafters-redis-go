@@ -714,6 +714,10 @@ func handleConn(conn net.Conn) {
 				if c.runBLPOP(args[1:]) != nil {
 					return
 				}
+			case "TYPE":
+				if c.runTYPE(args[1:]) != nil {
+					return
+				}
 			}
 
 			totalConsumed += consumed
