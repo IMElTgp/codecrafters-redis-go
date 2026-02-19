@@ -6,6 +6,7 @@ import (
 	"math"
 	"net"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -609,18 +610,18 @@ const (
 )
 
 // splitID returns the timestamp and number of an ID
-func splitID(id string) (tm, no int, err error) {
+func splitID(id string) (tm, no int64, err error) {
 	parts := strings.Split(id, "-")
 	if len(parts) != 2 {
 		// invalid format
 		return -1, -1, fmt.Errorf("SYNTAX ERROR in ID")
 	}
-	tm, err = strconv.Atoi(parts[0])
+	tm, err = strconv.ParseInt(parts[0], 10, 64)
 	if err != nil {
 		// handle error
 		return -1, -1, err
 	}
-	no, err = strconv.Atoi(parts[1])
+	no, err = strconv.ParseInt(parts[1], 10, 64)
 	if err != nil {
 		// handle error
 		return tm, -1, err
@@ -748,7 +749,7 @@ func (c *Conn) runXADD(args []string) error {
 	case FULL_AUTO:
 		// fully auto-implement
 		// tm <- current unix time (millisecond)
-		tm = int(time.Now().UnixMilli())
+		tm = time.Now().UnixMilli()
 
 		topTime, topNo, err := splitID(topElem.id)
 		if err != nil {
@@ -764,13 +765,40 @@ func (c *Conn) runXADD(args []string) error {
 		}
 	default:
 	}
-	id := strconv.Itoa(tm) + "-" + strconv.Itoa(no)
+	id := strconv.FormatInt(tm, 10) + "-" + strconv.FormatInt(no, 10)
 	cp = append(cp, Entry{id, kvs})
 	streams.Store(args[0], cp)
 	mu.Unlock()
 	// write back the entry id
 	_, err = c.Conn.Write([]byte(serialize(id)))
 	return err
+}
+
+// cmpID is a simple tool function for comparing ID for binary searches
+func cmpID(id1, id2 string) int {
+	tm1, no1, err := splitID(id1)
+	if err != nil {
+		// handle error
+		return -1
+	}
+	tm2, no2, err := splitID(id2)
+	if err != nil {
+		// handle error
+		return -1
+	}
+	if tm1 < tm2 {
+		return -1
+	}
+	if tm1 > tm2 {
+		return 1
+	}
+	if no1 < no2 {
+		return -1
+	}
+	if no1 > no2 {
+		return 1
+	}
+	return 0
 }
 
 func (c *Conn) runXRANGE(args []string) error {
@@ -786,12 +814,55 @@ func (c *Conn) runXRANGE(args []string) error {
 		streams.Store(args[0], Stream{})
 		streamRaw, _ = streams.Load(args[0])
 	}
-	stream, ok := streamRaw.(Stream)
+	stream, ok := streamRaw.([]Entry)
 	if !ok {
 		return fmt.Errorf("XRANGE: stream type mismatch")
 	}
-
+	startID, endID := args[1], args[2]
+	// process optional sequence numbers
+	if !strings.Contains(args[1], "-") {
+		startID += "-0"
+	}
+	if !strings.Contains(args[1], "-") {
+		endID += "-" + strconv.FormatInt(math.MaxInt64, 10)
+	}
+	// binary search the bounds
+	lo := sort.Search(len(stream), func(i int) bool {
+		return cmpID(stream[i].id, startID) >= 0
+	})
+	hi := sort.Search(len(stream), func(i int) bool {
+		return cmpID(stream[i].id, endID) > 0
+	})
+	// slice contains all entries to be written
+	slice := stream[lo:hi]
+	sliceLen := len(slice)
 	mu.Unlock()
+	// encode a RESP array
+	_, err := c.Conn.Write([]byte("*" + strconv.Itoa(sliceLen) + "\r\n"))
+	if err != nil {
+		// handle error
+		return err
+	}
+	// traverse all entries to write
+	for _, e := range slice {
+		_, err = c.Conn.Write([]byte("*2\r\n" + serialize(e.id)))
+		if err != nil {
+			// handle error
+			return err
+		}
+		_, err = c.Conn.Write([]byte("*" + strconv.Itoa(2*len(e.kv)) + "\r\n"))
+		if err != nil {
+			// handle error
+			return err
+		}
+		for _, kv := range e.kv {
+			_, err = c.Conn.Write([]byte(serialize(kv.key) + serialize(kv.value)))
+			if err != nil {
+				// handle error
+				return err
+			}
+		}
+	}
 
 	return nil
 }
