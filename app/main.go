@@ -692,11 +692,11 @@ func (c *Conn) runXADD(args []string) error {
 	switch checkID(args[1], topElem) {
 	case TIME_NO_MISMATCH:
 		mu.Unlock()
-		_, err := c.Conn.Write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item"))
+		_, err := c.Conn.Write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"))
 		return err
 	case INVALID_NO:
 		mu.Unlock()
-		_, err := c.Conn.Write([]byte("-ERR The ID specified in XADD must be greater than 0-0"))
+		_, err := c.Conn.Write([]byte("-ERR The ID specified in XADD must be greater than 0-0\r\n"))
 		return err
 	case UNKNOWN_ERROR:
 		mu.Unlock()
