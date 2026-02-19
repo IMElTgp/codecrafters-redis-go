@@ -623,7 +623,7 @@ func splitID(id string) (tm, no int, err error) {
 	no, err = strconv.Atoi(parts[1])
 	if err != nil {
 		// handle error
-		return -1, -1, err
+		return tm, -1, err
 	}
 	return tm, no, nil
 }
