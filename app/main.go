@@ -622,7 +622,7 @@ func (c *Conn) runXADD(args []string) error {
 	cp = append(cp, Entry{args[1], kvs})
 	streams.Store(args[0], cp)
 	mu.Unlock()
-
+	// write back the entry id
 	_, err := c.Conn.Write([]byte(serialize(args[1])))
 	return err
 }
@@ -782,6 +782,10 @@ func handleConn(conn net.Conn) {
 				}
 			case "TYPE":
 				if c.runTYPE(args[1:]) != nil {
+					return
+				}
+			case "XADD":
+				if c.runXADD(args[1:]) != nil {
 					return
 				}
 			}
