@@ -542,6 +542,25 @@ retryOnEmpty:
 	return nil
 }
 
+func (c *Conn) runTYPE(args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("TYPE: argument count mismatch")
+	}
+
+	mu.Lock()
+	_, ok := variables.Load(args[0])
+	if ok {
+		mu.Unlock()
+		_, err := c.Conn.Write([]byte("+string\r\n"))
+		return err
+	}
+
+	mu.Unlock()
+	_, err := c.Conn.Write([]byte("+none\r\n"))
+
+	return err
+}
+
 // a RESP argument parser
 func parseArgs(msg string) (args []string, consumed int, err error) {
 	// msg = strings.TrimSpace(msg)
