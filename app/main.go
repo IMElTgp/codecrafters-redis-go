@@ -773,6 +773,29 @@ func (c *Conn) runXADD(args []string) error {
 	return err
 }
 
+func (c *Conn) runXRANGE(args []string) error {
+	// usage: XRANGE some_key left_boarder right_boarder
+	if len(args) != 3 {
+		return fmt.Errorf("XRANGE: argument count mismatch")
+	}
+
+	mu.Lock()
+	streamRaw, ok := streams.Load(args[0])
+	if !ok {
+		// create a stream
+		streams.Store(args[0], Stream{})
+		streamRaw, _ = streams.Load(args[0])
+	}
+	stream, ok := streamRaw.(Stream)
+	if !ok {
+		return fmt.Errorf("XRANGE: stream type mismatch")
+	}
+
+	mu.Unlock()
+
+	return nil
+}
+
 // a RESP argument parser
 func parseArgs(msg string) (args []string, consumed int, err error) {
 	// msg = strings.TrimSpace(msg)
