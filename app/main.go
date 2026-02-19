@@ -670,7 +670,7 @@ func (c *Conn) runXADD(args []string) error {
 	if !checkID(args[1], topElem) {
 		// invalid ID
 		mu.Unlock()
-		_, err := c.Conn.Write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item"))
+		_, err := c.Conn.Write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"))
 		return err
 	}
 	cp = append(cp, Entry{args[1], kvs})
