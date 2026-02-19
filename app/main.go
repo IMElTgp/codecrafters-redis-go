@@ -630,17 +630,6 @@ func splitID(id string) (tm, no int, err error) {
 
 // checkID checks an entry's id for runXADD
 func checkID(id string, topElem Entry) int {
-	/*topParts := strings.Split(topElem.id, "-")
-	topTime, err := strconv.Atoi(topParts[0])
-	if err != nil {
-		// handle error
-		return UNKNOWN_ERROR
-	}
-	topNo, err := strconv.Atoi(topParts[1])
-	if err != nil {
-		// handle error
-		return UNKNOWN_ERROR
-	}*/
 	topTime, topNo, err := splitID(topElem.id)
 	if err != nil {
 		return UNKNOWN_ERROR
