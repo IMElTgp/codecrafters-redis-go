@@ -620,9 +620,13 @@ func checkID(id string, topElem Entry) (valid int) {
 		return UNKNOWN_ERROR
 	}
 
+	if tm == 0 && no == 0 {
+		return INVALID_NO
+	}
+
 	if topElem.kv == nil {
 		// `stream` is empty
-		if no <= 0 || tm == 0 && no == 0 {
+		if no <= 0 {
 			return INVALID_NO
 		}
 		return SUCCESS
