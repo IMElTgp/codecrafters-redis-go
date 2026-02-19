@@ -590,45 +590,61 @@ func (c *Conn) runTYPE(args []string) error {
 	return err
 }
 
+// two types of invalid ID and other faults
+const (
+	TIME_NO_MISMATCH = iota
+	INVALID_NO
+	SYNTAX_ERROR
+	UNKNOWN_ERROR
+	// SUCCESS is success code
+	SUCCESS
+)
+
 // checkID checks an entry's id for runXADD
-func checkID(id string, topElem Entry) (valid bool) {
+func checkID(id string, topElem Entry) (valid int) {
 	// split ID by -
 	// [NOT IMPLEMENTED] only for explicit ID of format xxxx-yyyy
 	parts := strings.Split(id, "-")
 	if len(parts) != 2 {
-		return false
+		return SYNTAX_ERROR
 	}
 
 	tm, err := strconv.Atoi(parts[0])
 	if err != nil {
 		// handle error
-		return false
+		return UNKNOWN_ERROR
 	}
 	no, err := strconv.Atoi(parts[1])
 	if err != nil {
 		// handle error
-		return false
+		return UNKNOWN_ERROR
 	}
 
 	if topElem.kv == nil {
 		// `stream` is empty
-		return no > 0
+		if no <= 0 {
+			return INVALID_NO
+		}
+		return SUCCESS
 	}
 
 	topParts := strings.Split(topElem.id, "-")
 	topTime, err := strconv.Atoi(topParts[0])
 	if err != nil {
 		// handle error
-		return false
+		return UNKNOWN_ERROR
 	}
 	topNo, err := strconv.Atoi(topParts[1])
 	if err != nil {
 		// handle error
-		return false
+		return UNKNOWN_ERROR
 	}
 	// topTime should not be larger than tm
 	// if equal, topNo should not be larger than no
-	return topTime < tm || topNo < no && topTime == tm
+	if topTime < tm || topNo < no && topTime == tm {
+		return SUCCESS
+	}
+	return TIME_NO_MISMATCH
 }
 
 func (c *Conn) runXADD(args []string) error {
@@ -667,11 +683,25 @@ func (c *Conn) runXADD(args []string) error {
 	} else {
 		topElem = cp[len(cp)-1]
 	}
-	if !checkID(args[1], topElem) {
+	/*if checkID(args[1], topElem) == TIME_NO_MISMATCH {
 		// invalid ID
 		mu.Unlock()
 		_, err := c.Conn.Write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"))
 		return err
+	}*/
+	switch checkID(args[1], topElem) {
+	case TIME_NO_MISMATCH:
+		mu.Unlock()
+		_, err := c.Conn.Write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item"))
+		return err
+	case INVALID_NO:
+		mu.Unlock()
+		_, err := c.Conn.Write([]byte("-ERR The ID specified in XADD must be greater than 0-0"))
+		return err
+	case UNKNOWN_ERROR:
+		mu.Unlock()
+		return fmt.Errorf("XADD: Unknown errors happened")
+	default:
 	}
 	cp = append(cp, Entry{args[1], kvs})
 	streams.Store(args[0], cp)
