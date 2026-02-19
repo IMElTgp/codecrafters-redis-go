@@ -590,6 +590,47 @@ func (c *Conn) runTYPE(args []string) error {
 	return err
 }
 
+// checkID checks an entry's id for runXADD
+func checkID(id string, topElem Entry) (valid bool) {
+	// split ID by -
+	// [NOT IMPLEMENTED] only for explicit ID of format xxxx-yyyy
+	parts := strings.Split(id, "-")
+	if len(parts) != 2 {
+		return false
+	}
+
+	tm, err := strconv.Atoi(parts[0])
+	if err != nil {
+		// handle error
+		return false
+	}
+	no, err := strconv.Atoi(parts[1])
+	if err != nil {
+		// handle error
+		return false
+	}
+
+	if topElem.kv == nil {
+		// `stream` is empty
+		return no > 0
+	}
+
+	topParts := strings.Split(topElem.id, "-")
+	topTime, err := strconv.Atoi(topParts[0])
+	if err != nil {
+		// handle error
+		return false
+	}
+	topNo, err := strconv.Atoi(topParts[1])
+	if err != nil {
+		// handle error
+		return false
+	}
+	// topTime should not be larger than tm
+	// if equal, topNo should not be larger than no
+	return topTime < tm || topNo < no && topTime == tm
+}
+
 func (c *Conn) runXADD(args []string) error {
 	if len(args) < 2 {
 		return fmt.Errorf("XADD: lacking argument(s)")
@@ -618,6 +659,19 @@ func (c *Conn) runXADD(args []string) error {
 		// stream is of wrong type
 		mu.Unlock()
 		return fmt.Errorf("XADD: stream type mismatch")
+	}
+	// checkID(args[1], topElem) // topElem := cp[len(cp)-1]
+	var topElem Entry
+	if len(cp) == 0 {
+		topElem = Entry{"0-0", nil}
+	} else {
+		topElem = cp[len(cp)-1]
+	}
+	if !checkID(args[1], topElem) {
+		// invalid ID
+		mu.Unlock()
+		_, err := c.Conn.Write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item"))
+		return err
 	}
 	cp = append(cp, Entry{args[1], kvs})
 	streams.Store(args[0], cp)
