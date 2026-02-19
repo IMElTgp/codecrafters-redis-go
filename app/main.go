@@ -814,8 +814,9 @@ func (c *Conn) runXRANGE(args []string) error {
 		streams.Store(args[0], Stream{})
 		streamRaw, _ = streams.Load(args[0])
 	}
-	stream, ok := streamRaw.([]Entry)
+	stream, ok := streamRaw.(Stream)
 	if !ok {
+		mu.Unlock()
 		return fmt.Errorf("XRANGE: stream type mismatch")
 	}
 	startID, endID := args[1], args[2]
