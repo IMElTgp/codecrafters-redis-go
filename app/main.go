@@ -950,10 +950,16 @@ func (c *Conn) runXREAD(args []string) error {
 			// handle error
 			return err
 		}
+		if blockTimeout == 0 {
+			// indefinite blocking
+			blockTimeout = math.MaxInt64
+		}
 		block = true
 	}
 
 	if !block {
+		// DO NOT ADD THIS PREFIX UNTIL WE KNOW WHETHER THE RESPONSE STRING SHOULD BE NULL
+		// or null array will be arrayed ([*-1\r\n])
 		_, err = c.Conn.Write([]byte("*" + strconv.Itoa(len(queries)) + "\r\n"))
 		if err != nil {
 			// handle error
@@ -998,6 +1004,7 @@ func (c *Conn) runXREAD(args []string) error {
 			ch := make(chan struct{}, 1)
 			waiters = append(waiters, Waiter{q[1], ch})
 			notifyXREAD.Store(q[0], waiters)
+			// SELECT BLOCK SHOULDN'T HOLD LOCK
 			mu.Unlock()
 			select {
 			case <-ch:
@@ -1013,12 +1020,13 @@ func (c *Conn) runXREAD(args []string) error {
 					mu.Unlock()
 					return fmt.Errorf("GO EAT SHIT")
 				}
+				// update the begining index, don't let it be sort.Search's error code as we will fallthrough to normal path
 				lo = sort.Search(len(stream), func(i int) bool {
 					return cmpID(stream[i].id, q[1]) > 0
 				})
 				goto normal
 			case <-time.After(time.Duration(blockTimeout) * time.Millisecond):
-				// return a null array
+				// timeout, return a null array
 				_, err = c.Conn.Write([]byte("*-1\r\n"))
 				return err
 			}
@@ -1026,6 +1034,7 @@ func (c *Conn) runXREAD(args []string) error {
 
 	normal:
 		if block {
+			// if we are sure we wouldn't return null array, add the prefix
 			_, err = c.Conn.Write([]byte("*" + strconv.Itoa(len(queries)) + "\r\n"))
 			if err != nil {
 				// handle error
