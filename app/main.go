@@ -981,6 +981,11 @@ func (c *Conn) runXREAD(args []string) error {
 			return fmt.Errorf("XREAD: stream type mismatch")
 		}
 
+		if q[1] == "$" {
+			// considered as the maximum id currently available
+			q[1] = stream[len(stream)-1].id
+		}
+
 		lo := sort.Search(len(stream), func(i int) bool {
 			return cmpID(stream[i].id, q[1]) > 0
 		})
