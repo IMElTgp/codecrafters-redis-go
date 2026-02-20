@@ -1119,6 +1119,13 @@ func (c *Conn) runINCR(args []string) error {
 
 	mu.Unlock()
 
+	// write
+	_, err = c.Conn.Write([]byte(":" + strconv.Itoa(valNum+1) + "\r\n"))
+	if err != nil {
+		// handle error
+		return err
+	}
+
 	return nil
 }
 
