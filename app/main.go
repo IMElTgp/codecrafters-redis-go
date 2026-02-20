@@ -1146,6 +1146,9 @@ func (c *Conn) runMULTI(args []string) error {
 
 // a RESP argument parser
 func parseArgs(msg string) (args []string, consumed int, err error) {
+	if len(msg) == 0 {
+		return nil, 0, fmt.Errorf("parseArgs: msg is empty")
+	}
 	// msg = strings.TrimSpace(msg)
 	// general rule of REdis Serialization Protocol (RESP) array
 	// *<count>\r\n followed by that many elements
