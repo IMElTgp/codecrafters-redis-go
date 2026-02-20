@@ -1000,6 +1000,9 @@ func (c *Conn) runXREAD(args []string) error {
 			select {
 			case <-ch:
 				mu.Lock()
+				lo = sort.Search(len(stream), func(i int) bool {
+					return cmpID(stream[i].id, q[1]) > 0
+				})
 				goto normal
 			case <-time.After(time.Duration(blockTimeout) * time.Millisecond):
 				// return a null array
