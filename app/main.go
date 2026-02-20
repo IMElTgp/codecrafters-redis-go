@@ -1299,7 +1299,7 @@ func handleConn(conn net.Conn) {
 						// handle error
 						return
 					}
-					continue
+					goto skip
 				}
 				if c.runPING() != nil {
 					// handle error
@@ -1312,7 +1312,7 @@ func handleConn(conn net.Conn) {
 						// handle error
 						return
 					}
-					continue
+					goto skip
 				}
 				if c.runECHO(args[1:]) != nil {
 					// handle error
@@ -1325,7 +1325,7 @@ func handleConn(conn net.Conn) {
 						// handle error
 						return
 					}
-					continue
+					goto skip
 				}
 				if c.runSET(args[1:]) != nil {
 					// handle error
@@ -1338,7 +1338,7 @@ func handleConn(conn net.Conn) {
 						// handle error
 						return
 					}
-					continue
+					goto skip
 				}
 				if c.runGET(args[1:]) != nil {
 					// handle error
@@ -1351,7 +1351,7 @@ func handleConn(conn net.Conn) {
 						// handle error
 						return
 					}
-					continue
+					goto skip
 				}
 				if c.runRPUSH(args[1:]) != nil {
 					return
@@ -1363,7 +1363,7 @@ func handleConn(conn net.Conn) {
 						// handle error
 						return
 					}
-					continue
+					goto skip
 				}
 				if c.runLPUSH(args[1:]) != nil {
 					return
@@ -1375,7 +1375,7 @@ func handleConn(conn net.Conn) {
 						// handle error
 						return
 					}
-					continue
+					goto skip
 				}
 				if c.runLRANGE(args[1:]) != nil {
 					return
@@ -1387,7 +1387,7 @@ func handleConn(conn net.Conn) {
 						// handle error
 						return
 					}
-					continue
+					goto skip
 				}
 				if c.runLLEN(args[1:]) != nil {
 					return
@@ -1399,7 +1399,7 @@ func handleConn(conn net.Conn) {
 						// handle error
 						return
 					}
-					continue
+					goto skip
 				}
 				if c.runLPOP(args[1:]) != nil {
 					return
@@ -1411,7 +1411,7 @@ func handleConn(conn net.Conn) {
 						// handle error
 						return
 					}
-					continue
+					goto skip
 				}
 				if c.runBLPOP(args[1:]) != nil {
 					return
@@ -1423,7 +1423,7 @@ func handleConn(conn net.Conn) {
 						// handle error
 						return
 					}
-					continue
+					goto skip
 				}
 				if c.runTYPE(args[1:]) != nil {
 					return
@@ -1435,7 +1435,7 @@ func handleConn(conn net.Conn) {
 						// handle error
 						return
 					}
-					continue
+					goto skip
 				}
 				if c.runXADD(args[1:]) != nil {
 					return
@@ -1447,7 +1447,7 @@ func handleConn(conn net.Conn) {
 						// handle error
 						return
 					}
-					continue
+					goto skip
 				}
 				if c.runXRANGE(args[1:]) != nil {
 					return
@@ -1459,7 +1459,7 @@ func handleConn(conn net.Conn) {
 						// handle error
 						return
 					}
-					continue
+					goto skip
 				}
 				if c.runXREAD(args[1:]) != nil {
 					return
@@ -1471,7 +1471,7 @@ func handleConn(conn net.Conn) {
 						// handle error
 						return
 					}
-					continue
+					goto skip
 				}
 				if c.runINCR(args[1:]) != nil {
 					return
@@ -1483,7 +1483,7 @@ func handleConn(conn net.Conn) {
 						// handle error
 						return
 					}
-					continue
+					goto skip
 				}
 				if c.runMULTI(args[1:]) != nil {
 					return
@@ -1505,6 +1505,7 @@ func handleConn(conn net.Conn) {
 					return
 				}
 			}
+		skip:
 			if !exec {
 				// if exec, consumed has been counted
 				totalConsumed += consumed
