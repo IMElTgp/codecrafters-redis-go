@@ -953,10 +953,12 @@ func (c *Conn) runXREAD(args []string) error {
 		block = true
 	}
 
-	_, err = c.Conn.Write([]byte("*" + strconv.Itoa(len(queries)) + "\r\n"))
-	if err != nil {
-		// handle error
-		return err
+	if !block {
+		_, err = c.Conn.Write([]byte("*" + strconv.Itoa(len(queries)) + "\r\n"))
+		if err != nil {
+			// handle error
+			return err
+		}
 	}
 
 	for _, q := range queries {
@@ -1023,6 +1025,14 @@ func (c *Conn) runXREAD(args []string) error {
 		}
 
 	normal:
+		if block {
+			_, err = c.Conn.Write([]byte("*" + strconv.Itoa(len(queries)) + "\r\n"))
+			if err != nil {
+				// handle error
+				return err
+			}
+		}
+
 		slice := stream[lo:]
 		mu.Unlock()
 
