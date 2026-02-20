@@ -995,6 +995,7 @@ func (c *Conn) runXREAD(args []string) error {
 			}
 			ch := make(chan struct{}, 1)
 			waiters = append(waiters, Waiter{q[1], ch})
+			notifyXREAD.Store(q[0], waiters)
 
 			select {
 			case <-ch:
