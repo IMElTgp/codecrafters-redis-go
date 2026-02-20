@@ -1003,10 +1003,7 @@ func (c *Conn) runXREAD(args []string) error {
 				// return a null array
 				mu.Unlock()
 				_, err = c.Conn.Write([]byte("*-1\r\n"))
-				if err != nil {
-					// handle error
-					return err
-				}
+				return err
 			}
 		}
 
