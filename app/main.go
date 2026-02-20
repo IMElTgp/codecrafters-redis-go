@@ -1104,7 +1104,7 @@ func handleConn(conn net.Conn) {
 					return
 				}
 			case "XREAD":
-				if c.runXREAD(args[1:]) != nil {
+				if c.runXREAD(args[2:]) != nil {
 					return
 				}
 			}
