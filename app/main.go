@@ -1100,7 +1100,11 @@ func (c *Conn) runINCR(args []string) error {
 	// increment the value of a key by 1
 	valRaw, ok := variables.Load(args[0])
 	if !ok {
-		// not implemented
+		// not exist
+		// store back a nil value
+		mu.Unlock()
+		c.runSET([]string{args[0], "0"})
+		mu.Lock()
 	}
 	val, ok := valRaw.(Value)
 	if !ok {
