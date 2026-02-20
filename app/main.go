@@ -1114,7 +1114,10 @@ func (c *Conn) runINCR(args []string) error {
 	valNum, err := strconv.Atoi(val.Val)
 	if err != nil {
 		// handle error
+		// key exists but doesn't have a numeric value
+		// return an error
 		mu.Unlock()
+		_, err = c.Conn.Write([]byte("-ERR value is not an integer or out of range\r\n"))
 		return err
 	}
 
