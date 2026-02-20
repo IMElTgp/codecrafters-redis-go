@@ -1135,6 +1135,15 @@ func (c *Conn) runINCR(args []string) error {
 	return nil
 }
 
+func (c *Conn) runMULTI(args []string) error {
+	if len(args) > 0 {
+		return fmt.Errorf("MULTI: this command does not support additional arguments")
+	}
+
+	_, err := c.Conn.Write([]byte("+OK\r\n"))
+	return err
+}
+
 // a RESP argument parser
 func parseArgs(msg string) (args []string, consumed int, err error) {
 	// msg = strings.TrimSpace(msg)
@@ -1208,6 +1217,16 @@ func parseArgs(msg string) (args []string, consumed int, err error) {
 	return
 }
 
+func (c *Conn) processMULTI(q [][]string, args []string) ([][]string, error) {
+	q = append(q, args)
+	_, err := c.Conn.Write([]byte("+QUEUED\r\n"))
+	if err != nil {
+		// handle error
+		return nil, err
+	}
+	return q, nil
+}
+
 // working function which carries logics related to client serving
 func handleConn(conn net.Conn) {
 	defer func() {
@@ -1234,7 +1253,10 @@ func handleConn(conn net.Conn) {
 
 		// parse args
 		totalConsumed := 0
-		for totalConsumed < len(buffer[:n]) {
+		// MULTI blocking
+		multi := false
+		cmdQueue := [][]string{}
+		for totalConsumed < len(buffer[:n]) || len(cmdQueue) > 0 {
 			args, consumed, err := parseArgs(string(buffer[totalConsumed:n]))
 			if err != nil {
 				// handle error
@@ -1245,71 +1267,203 @@ func handleConn(conn net.Conn) {
 			}
 			switch strings.ToUpper(args[0]) {
 			case "PING":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					continue
+				}
 				if c.runPING() != nil {
 					// handle error
 					return
 				}
 			case "ECHO":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					continue
+				}
 				if c.runECHO(args[1:]) != nil {
 					// handle error
 					return
 				}
 			case "SET":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					continue
+				}
 				if c.runSET(args[1:]) != nil {
 					// handle error
 					return
 				}
 			case "GET":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					continue
+				}
 				if c.runGET(args[1:]) != nil {
 					// handle error
 					return
 				}
 			case "RPUSH":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					continue
+				}
 				if c.runRPUSH(args[1:]) != nil {
 					return
 				}
 			case "LPUSH":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					continue
+				}
 				if c.runLPUSH(args[1:]) != nil {
 					return
 				}
 			case "LRANGE":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					continue
+				}
 				if c.runLRANGE(args[1:]) != nil {
 					return
 				}
 			case "LLEN":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					continue
+				}
 				if c.runLLEN(args[1:]) != nil {
 					return
 				}
 			case "LPOP":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					continue
+				}
 				if c.runLPOP(args[1:]) != nil {
 					return
 				}
 			case "BLPOP":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					continue
+				}
 				if c.runBLPOP(args[1:]) != nil {
 					return
 				}
 			case "TYPE":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					continue
+				}
 				if c.runTYPE(args[1:]) != nil {
 					return
 				}
 			case "XADD":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					continue
+				}
 				if c.runXADD(args[1:]) != nil {
 					return
 				}
 			case "XRANGE":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					continue
+				}
 				if c.runXRANGE(args[1:]) != nil {
 					return
 				}
 			case "XREAD":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					continue
+				}
 				if c.runXREAD(args[1:]) != nil {
 					return
 				}
 			case "INCR":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					continue
+				}
 				if c.runINCR(args[1:]) != nil {
 					return
 				}
+			case "MULTI":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					continue
+				}
+				if c.runMULTI(args[1:]) != nil {
+					return
+				}
+				multi = true
 			}
-
 			totalConsumed += consumed
 		}
 	}
