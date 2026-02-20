@@ -1299,9 +1299,3 @@ func main() {
 		go handleConn(conn)
 	}
 }
-
-/**
-TODO: runXREAD -> blocking XREAD
-TODO: for each stream we need to process separately -> we need a map here
-TODO: for a certain stream we need to maintain a slice of waiters (with lastID (to confirm whether we should wake them up) and channel (from which we can wake them up)) and traverse the slice on new entry arrival (additional logics in XADD) (could we remove notified waiters?)
-*/
