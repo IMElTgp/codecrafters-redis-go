@@ -1240,6 +1240,7 @@ func handleConn(conn net.Conn) {
 	var buffer = make([]byte, 1024)
 	c := &Conn{conn}
 
+	// cross-command variables should be kept outside the for loop
 	// MULTI blocking
 	multi := false
 	cmdQueue := [][]string{}
