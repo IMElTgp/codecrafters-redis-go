@@ -1000,6 +1000,17 @@ func (c *Conn) runXREAD(args []string) error {
 			select {
 			case <-ch:
 				mu.Lock()
+				// FUCKING REMEMBER THAT STREAM SHOULD BE UPDATED
+				streamRaw, ok = streams.Load(q[0])
+				if !ok {
+					mu.Unlock()
+					return fmt.Errorf("GO EAT SHIT")
+				}
+				stream, ok = streamRaw.(Stream)
+				if !ok {
+					mu.Unlock()
+					return fmt.Errorf("GO EAT SHIT")
+				}
 				lo = sort.Search(len(stream), func(i int) bool {
 					return cmpID(stream[i].id, q[1]) > 0
 				})
