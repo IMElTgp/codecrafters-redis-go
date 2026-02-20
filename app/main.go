@@ -1240,6 +1240,12 @@ func handleConn(conn net.Conn) {
 	var buffer = make([]byte, 1024)
 	c := &Conn{conn}
 
+	// MULTI blocking
+	multi := false
+	cmdQueue := [][]string{}
+	// exec mode
+	exec := false
+
 	for {
 		n, err := conn.Read(buffer)
 		if err != nil {
@@ -1253,11 +1259,7 @@ func handleConn(conn net.Conn) {
 
 		// parse args
 		totalConsumed := 0
-		// MULTI blocking
-		multi := false
-		cmdQueue := [][]string{}
-		// exec mode
-		exec := false
+
 		for totalConsumed < len(buffer[:n]) || len(cmdQueue) > 0 {
 			var (
 				args     []string
