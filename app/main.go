@@ -1485,11 +1485,8 @@ func handleConn(conn net.Conn) {
 			case "EXEC":
 				if !multi {
 					// haven't called MULTI
-					_, err = c.Conn.Write([]byte("-ERR EXEC without MULTI\r\n"))
-					if err != nil {
-						// handle error
-						return
-					}
+					_, _ = c.Conn.Write([]byte("-ERR EXEC without MULTI\r\n"))
+					return
 				}
 				multi = false
 				exec = true
