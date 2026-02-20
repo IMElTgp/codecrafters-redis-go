@@ -873,6 +873,22 @@ func (c *Conn) runXRANGE(args []string) error {
 	return nil
 }
 
+func (c *Conn) runXREAD(args []string) error {
+	if len(args) != 2 {
+		return fmt.Errorf("XREAD: argument count mismatch")
+	}
+
+	parts := strings.Split(args[1], "-")
+	no, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		// handle error
+		return err
+	}
+	newID := parts[0] + "-" + strconv.FormatInt(no+1, 10)
+
+	return c.runXRANGE([]string{args[0], newID, "+"})
+}
+
 // a RESP argument parser
 func parseArgs(msg string) (args []string, consumed int, err error) {
 	// msg = strings.TrimSpace(msg)
@@ -1036,6 +1052,10 @@ func handleConn(conn net.Conn) {
 				}
 			case "XRANGE":
 				if c.runXRANGE(args[1:]) != nil {
+					return
+				}
+			case "XREAD":
+				if c.runXREAD(args[1:]) != nil {
 					return
 				}
 			}
