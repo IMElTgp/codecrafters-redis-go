@@ -923,7 +923,7 @@ func (c *Conn) runXREAD(args []string) error {
 		resp := "*2\r\n" + serialize(e.id)
 
 		// 6. traverse all KV pairs
-		resp += strconv.Itoa(2 * len(e.kv))
+		resp += "*" + strconv.Itoa(2*len(e.kv)) + "\r\n"
 		for _, kv := range e.kv {
 			resp += serialize(kv.key) + serialize(kv.value)
 		}
