@@ -878,6 +878,8 @@ func (c *Conn) runXREAD(args []string) error {
 	// 	return fmt.Errorf("XREAD: argument count mismatch")
 	//}
 	// for multiple queries
+	// format: STREAM <key1> <key2> ... <id1> <id2> ...
+	// key1 <-> id1, key2 <-> id2, ...
 	queries := [][]string{}
 
 	for i := 1; i < (len(args)+1)/2; i++ {
