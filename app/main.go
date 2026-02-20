@@ -877,61 +877,68 @@ func (c *Conn) runXREAD(args []string) error {
 	// if len(args) != 2 {
 	// 	return fmt.Errorf("XREAD: argument count mismatch")
 	//}
+	queries := [][]string{}
 
-	mu.Lock()
-	streamRaw, ok := streams.Load(args[0])
-	if !ok {
-		streams.Store(args[0], Stream{})
-		streamRaw, _ = streams.Load(args[0])
+	for i := 0; i < len(args)/2; i++ {
+		queries = append(queries, []string{args[i], args[i+len(args)/2]})
 	}
 
-	stream, ok := streamRaw.(Stream)
-	if !ok {
-		mu.Unlock()
-		return fmt.Errorf("XREAD: stream type mismatch")
-	}
-
-	lo := sort.Search(len(stream), func(i int) bool {
-		return cmpID(stream[i].id, args[1]) > 0
-	})
-	slice := stream[lo:]
-	mu.Unlock()
-
-	// encode a RESP response
-	// 0. prefix
-	_, err := c.Conn.Write([]byte("*1\r\n*2\r\n"))
-	if err != nil {
-		// handle error
-		return err
-	}
-	// 1. the stream key, as a bulk string
-	_, err = c.Conn.Write([]byte(serialize(args[0])))
-	if err != nil {
-		// handle error
-		return err
-	}
-	// 2. length of slice (entries to be written)
-	_, err = c.Conn.Write([]byte("*" + strconv.Itoa(len(slice)) + "\r\n"))
-	if err != nil {
-		// handle error
-		return err
-	}
-	// 3. traverse all entries
-	for _, e := range slice {
-		// 4. 2 for ID + KV pair slice
-		// 5. id
-		resp := "*2\r\n" + serialize(e.id)
-
-		// 6. traverse all KV pairs
-		resp += "*" + strconv.Itoa(2*len(e.kv)) + "\r\n"
-		for _, kv := range e.kv {
-			resp += serialize(kv.key) + serialize(kv.value)
+	for _, q := range queries {
+		mu.Lock()
+		streamRaw, ok := streams.Load(q[0])
+		if !ok {
+			streams.Store(args[0], Stream{})
+			streamRaw, _ = streams.Load(q[0])
 		}
 
-		_, err = c.Conn.Write([]byte(resp))
+		stream, ok := streamRaw.(Stream)
+		if !ok {
+			mu.Unlock()
+			return fmt.Errorf("XREAD: stream type mismatch")
+		}
+
+		lo := sort.Search(len(stream), func(i int) bool {
+			return cmpID(stream[i].id, q[1]) > 0
+		})
+		slice := stream[lo:]
+		mu.Unlock()
+
+		// encode a RESP response
+		// 0. prefix
+		_, err := c.Conn.Write([]byte("*1\r\n*2\r\n"))
 		if err != nil {
 			// handle error
 			return err
+		}
+		// 1. the stream key, as a bulk string
+		_, err = c.Conn.Write([]byte(serialize(q[0])))
+		if err != nil {
+			// handle error
+			return err
+		}
+		// 2. length of slice (entries to be written)
+		_, err = c.Conn.Write([]byte("*" + strconv.Itoa(len(slice)) + "\r\n"))
+		if err != nil {
+			// handle error
+			return err
+		}
+		// 3. traverse all entries
+		for _, e := range slice {
+			// 4. 2 for ID + KV pair slice
+			// 5. id
+			resp := "*2\r\n" + serialize(e.id)
+
+			// 6. traverse all KV pairs
+			resp += "*" + strconv.Itoa(2*len(e.kv)) + "\r\n"
+			for _, kv := range e.kv {
+				resp += serialize(kv.key) + serialize(kv.value)
+			}
+
+			_, err = c.Conn.Write([]byte(resp))
+			if err != nil {
+				// handle error
+				return err
+			}
 		}
 	}
 
