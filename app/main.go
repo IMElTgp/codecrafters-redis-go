@@ -952,7 +952,7 @@ func (c *Conn) runXREAD(args []string) error {
 		}
 		if blockTimeout == 0 {
 			// indefinite blocking
-			blockTimeout = math.MaxInt64
+			blockTimeout = math.MaxInt32
 		}
 		block = true
 	}
@@ -1031,7 +1031,6 @@ func (c *Conn) runXREAD(args []string) error {
 				return err
 			}
 		}
-
 	normal:
 		if block {
 			// if we are sure we wouldn't return null array, add the prefix
