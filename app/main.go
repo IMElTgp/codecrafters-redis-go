@@ -937,7 +937,7 @@ func (c *Conn) runXREAD(args []string) error {
 	var blockTimeout int64
 	var err error
 
-	if args[0] == "STREAM" {
+	if strings.ToUpper(args[0]) == "STREAM" {
 		for i := 1; i < (len(args)+1)/2; i++ {
 			queries = append(queries, []string{args[i], args[i+(len(args)-1)/2]})
 		}
@@ -996,13 +996,13 @@ func (c *Conn) runXREAD(args []string) error {
 			ch := make(chan struct{}, 1)
 			waiters = append(waiters, Waiter{q[1], ch})
 			notifyXREAD.Store(q[0], waiters)
-
+			mu.Unlock()
 			select {
 			case <-ch:
+				mu.Lock()
 				goto normal
 			case <-time.After(time.Duration(blockTimeout) * time.Millisecond):
 				// return a null array
-				mu.Unlock()
 				_, err = c.Conn.Write([]byte("*-1\r\n"))
 				return err
 			}
