@@ -35,6 +35,12 @@ type Entry struct {
 	kv []KV
 }
 
+// Waiter is for presenting waiters waiting for XREAD
+type Waiter struct {
+	lastID string        // minimal ID provided by XREAD command (exclusive)
+	ch     chan struct{} // to signal this waiter
+}
+
 // Stream is type stream
 type Stream []Entry
 
@@ -52,6 +58,10 @@ var mu sync.Mutex
 
 // a global hash map for notifying BLPOP
 var notify sync.Map // Map[string]chan struct{}
+
+// a global hash map for notifying XREAD
+// string(stream name) -> []Waiter
+var notifyXREAD sync.Map // Map[string]chan struct{}
 
 // tool function for getting list copy from Map
 func getCopy(key string) ([]any, error) {
@@ -520,6 +530,7 @@ retryOnEmpty:
 			return err
 		}
 		// check race condition: if some goroutines pop first
+		// similar to `for cond.Wait()`
 		if len(cp) == 0 {
 			mu.Unlock()
 			goto retryOnEmpty
@@ -670,7 +681,7 @@ func checkID(id string, topElem Entry) int {
 }
 
 func (c *Conn) runXADD(args []string) error {
-	if len(args) < 2 {
+	if len(args) < 4 {
 		return fmt.Errorf("XADD: lacking argument(s)")
 	}
 	if len(args)%2 != 0 {
@@ -768,6 +779,47 @@ func (c *Conn) runXADD(args []string) error {
 	id := strconv.FormatInt(tm, 10) + "-" + strconv.FormatInt(no, 10)
 	cp = append(cp, Entry{id, kvs})
 	streams.Store(args[0], cp)
+
+	// signal waiters
+	waitersRaw, ok := notifyXREAD.Load(args[0])
+	if !ok {
+		notifyXREAD.Store(args[0], []Waiter{})
+		waitersRaw, _ = notifyXREAD.Load(args[0])
+	}
+	waiters, ok := waitersRaw.([]Waiter)
+	if !ok {
+		mu.Unlock()
+		return fmt.Errorf("XADD: waiter list type mismatch")
+	}
+	// lazy delete
+	toDel := make([]bool, len(waiters))
+	for i := range waiters {
+		if cmpID(waiters[i].lastID, id) < 0 {
+			// new ID on arrival
+			// signal it and remove this record
+			select {
+			case waiters[i].ch <- struct{}{}:
+			default:
+			}
+			toDel[i] = true
+		}
+	}
+	i := 0
+	for _, del := range toDel {
+		if del {
+			if i == 0 {
+				waiters = waiters[1:]
+			} else if i < len(waiters)-1 {
+				waiters = append(waiters[:i], waiters[i+1:]...)
+			} else {
+				waiters = waiters[:len(waiters)-1]
+			}
+		} else {
+			i++
+		}
+	}
+	// writeback
+	notifyXREAD.Store(args[0], waiters)
 	mu.Unlock()
 	// write back the entry id
 	_, err = c.Conn.Write([]byte(serialize(id)))
@@ -881,9 +933,24 @@ func (c *Conn) runXREAD(args []string) error {
 	// format: STREAM <key1> <key2> ... <id1> <id2> ...
 	// key1 <-> id1, key2 <-> id2, ...
 	queries := [][]string{}
+	block := false
+	var blockTimeout int64
+	var err error
 
-	for i := 1; i < (len(args)+1)/2; i++ {
-		queries = append(queries, []string{args[i], args[i+(len(args)-1)/2]})
+	if args[0] == "STREAM" {
+		for i := 1; i < (len(args)+1)/2; i++ {
+			queries = append(queries, []string{args[i], args[i+(len(args)-1)/2]})
+		}
+	} else {
+		// blocking XREAD isn't compatible for multiple queries
+		queries = append(queries, []string{args[3], args[4]})
+		// fetch blocking timeout
+		blockTimeout, err = strconv.ParseInt(args[1], 10, 64)
+		if err != nil {
+		    // handle error
+		    return err
+		}
+		block = true
 	}
 
 	_, err := c.Conn.Write([]byte("*" + strconv.Itoa(len(queries)) + "\r\n"))
@@ -896,7 +963,7 @@ func (c *Conn) runXREAD(args []string) error {
 		mu.Lock()
 		streamRaw, ok := streams.Load(q[0])
 		if !ok {
-			streams.Store(args[0], Stream{})
+			streams.Store(q[0], Stream{})
 			streamRaw, _ = streams.Load(q[0])
 		}
 
@@ -909,6 +976,41 @@ func (c *Conn) runXREAD(args []string) error {
 		lo := sort.Search(len(stream), func(i int) bool {
 			return cmpID(stream[i].id, q[1]) > 0
 		})
+
+		if lo == len(stream) {
+			// lo not found
+			if !block {
+				// do nothing
+				goto normal
+			}
+			waitersRaw, ok := notifyXREAD.Load(q[0])
+			if !ok {
+				notifyXREAD.Store(q[0], []Waiter)
+				waitersRaw, _ = notifyXREAD.Load(q[0])
+			}
+			waiters, ok := waitersRaw.([]Waiter)
+			if !ok {
+				mu.Unlock()
+				return fmt.Errorf("XREAD: waiter list type mismatch")
+			}
+			ch := make(chan struct{}, 1)
+			waiters = append(waiters, Waiter{q[1], ch})
+
+			select {
+			case <-ch:
+				goto normal
+			case <-time.After(time.Duration(blockTimeout)*time.Millisecond):
+				// return a null array
+				mu.Unlock()
+				_, err = c.Conn.Write([]byte("*-1\r\n"))
+				if err != nil {
+					// handle error
+					return err
+				}
+			}
+		}
+
+normal:
 		slice := stream[lo:]
 		mu.Unlock()
 
@@ -1162,3 +1264,9 @@ func main() {
 		go handleConn(conn)
 	}
 }
+
+/**
+TODO: runXREAD -> blocking XREAD
+TODO: for each stream we need to process separately -> we need a map here
+TODO: for a certain stream we need to maintain a slice of waiters (with lastID (to confirm whether we should wake them up) and channel (from which we can wake them up)) and traverse the slice on new entry arrival (additional logics in XADD) (could we remove notified waiters?)
+*/
