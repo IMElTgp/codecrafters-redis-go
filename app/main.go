@@ -947,13 +947,13 @@ func (c *Conn) runXREAD(args []string) error {
 		// fetch blocking timeout
 		blockTimeout, err = strconv.ParseInt(args[1], 10, 64)
 		if err != nil {
-		    // handle error
-		    return err
+			// handle error
+			return err
 		}
 		block = true
 	}
 
-	_, err := c.Conn.Write([]byte("*" + strconv.Itoa(len(queries)) + "\r\n"))
+	_, err = c.Conn.Write([]byte("*" + strconv.Itoa(len(queries)) + "\r\n"))
 	if err != nil {
 		// handle error
 		return err
@@ -985,7 +985,7 @@ func (c *Conn) runXREAD(args []string) error {
 			}
 			waitersRaw, ok := notifyXREAD.Load(q[0])
 			if !ok {
-				notifyXREAD.Store(q[0], []Waiter)
+				notifyXREAD.Store(q[0], []Waiter{})
 				waitersRaw, _ = notifyXREAD.Load(q[0])
 			}
 			waiters, ok := waitersRaw.([]Waiter)
@@ -999,7 +999,7 @@ func (c *Conn) runXREAD(args []string) error {
 			select {
 			case <-ch:
 				goto normal
-			case <-time.After(time.Duration(blockTimeout)*time.Millisecond):
+			case <-time.After(time.Duration(blockTimeout) * time.Millisecond):
 				// return a null array
 				mu.Unlock()
 				_, err = c.Conn.Write([]byte("*-1\r\n"))
@@ -1010,7 +1010,7 @@ func (c *Conn) runXREAD(args []string) error {
 			}
 		}
 
-normal:
+	normal:
 		slice := stream[lo:]
 		mu.Unlock()
 
