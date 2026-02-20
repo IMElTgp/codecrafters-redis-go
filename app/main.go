@@ -1240,7 +1240,14 @@ func handleConn(conn net.Conn) {
 	var buffer = make([]byte, 1024)
 	c := &Conn{conn}
 
+	// MULTI blocking
+	multi := false
+	cmdQueue := [][]string{}
+	// exec mode
+	exec := false
+
 	for {
+		// for multiple commands in a line, which I haven't seen in test cases
 		n, err := conn.Read(buffer)
 		if err != nil {
 			// handle error
@@ -1253,11 +1260,6 @@ func handleConn(conn net.Conn) {
 
 		// parse args
 		totalConsumed := 0
-		// MULTI blocking
-		multi := false
-		cmdQueue := [][]string{}
-		// exec mode
-		exec := false
 
 		for totalConsumed < len(buffer[:n]) || len(cmdQueue) > 0 {
 			var (
