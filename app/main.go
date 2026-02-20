@@ -874,9 +874,9 @@ func (c *Conn) runXRANGE(args []string) error {
 }
 
 func (c *Conn) runXREAD(args []string) error {
-	if len(args) != 2 {
-		return fmt.Errorf("XREAD: argument count mismatch")
-	}
+	// if len(args) != 2 {
+	// 	return fmt.Errorf("XREAD: argument count mismatch")
+	//}
 
 	mu.Lock()
 	streamRaw, ok := streams.Load(args[0])
@@ -923,7 +923,7 @@ func (c *Conn) runXREAD(args []string) error {
 		resp := "*2\r\n" + serialize(e.id)
 
 		// 6. traverse all KV pairs
-		resp += strconv.Itoa(len(e.kv))
+		resp += strconv.Itoa(2 * len(e.kv))
 		for _, kv := range e.kv {
 			resp += serialize(kv.key) + serialize(kv.value)
 		}
