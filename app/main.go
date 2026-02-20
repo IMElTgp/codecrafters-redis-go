@@ -878,15 +878,64 @@ func (c *Conn) runXREAD(args []string) error {
 		return fmt.Errorf("XREAD: argument count mismatch")
 	}
 
-	parts := strings.Split(args[1], "-")
-	no, err := strconv.ParseInt(parts[1], 10, 64)
+	mu.Lock()
+	streamRaw, ok := streams.Load(args[0])
+	if !ok {
+		streams.Store(args[0], Stream{})
+		streamRaw, _ = streams.Load(args[0])
+	}
+
+	stream, ok := streamRaw.(Stream)
+	if !ok {
+		mu.Unlock()
+		return fmt.Errorf("XREAD: stream type mismatch")
+	}
+
+	lo := sort.Search(len(stream), func(i int) bool {
+		return cmpID(stream[i].id, args[1]) > 0
+	})
+	slice := stream[lo:]
+	mu.Unlock()
+
+	// encode a RESP response
+	// 0. prefix
+	_, err := c.Conn.Write([]byte("*1\r\n*2\r\n"))
 	if err != nil {
 		// handle error
 		return err
 	}
-	newID := parts[0] + "-" + strconv.FormatInt(no+1, 10)
+	// 1. the stream key, as a bulk string
+	_, err = c.Conn.Write([]byte(serialize(args[0])))
+	if err != nil {
+		// handle error
+		return err
+	}
+	// 2. length of slice (entries to be written)
+	_, err = c.Conn.Write([]byte("*" + strconv.Itoa(len(slice)) + "\r\n"))
+	if err != nil {
+		// handle error
+		return err
+	}
+	// 3. traverse all entries
+	for _, e := range slice {
+		// 4. 2 for ID + KV pair slice
+		// 5. id
+		resp := "*2\r\n" + serialize(e.id)
 
-	return c.runXRANGE([]string{args[0], newID, "+"})
+		// 6. traverse all KV pairs
+		resp += strconv.Itoa(len(e.kv))
+		for _, kv := range e.kv {
+			resp += serialize(kv.key) + serialize(kv.value)
+		}
+
+		_, err = c.Conn.Write([]byte(resp))
+		if err != nil {
+			// handle error
+			return err
+		}
+	}
+
+	return nil
 }
 
 // a RESP argument parser
