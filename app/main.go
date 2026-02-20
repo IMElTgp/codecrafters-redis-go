@@ -937,7 +937,7 @@ func (c *Conn) runXREAD(args []string) error {
 	var blockTimeout int64
 	var err error
 
-	if strings.ToUpper(args[0]) == "STREAM" {
+	if strings.ToUpper(args[0]) == "STREAMS" {
 		for i := 1; i < (len(args)+1)/2; i++ {
 			queries = append(queries, []string{args[i], args[i+(len(args)-1)/2]})
 		}
