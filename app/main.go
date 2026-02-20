@@ -1144,14 +1144,6 @@ func (c *Conn) runMULTI(args []string) error {
 	return err
 }
 
-func (c *Conn) runEXEC(args []string) error {
-	if len(args) != 0 {
-		return fmt.Errorf("EXEC: this command does not support additional arguments")
-	}
-
-	_, err :=
-}
-
 // a RESP argument parser
 func parseArgs(msg string) (args []string, consumed int, err error) {
 	// msg = strings.TrimSpace(msg)
@@ -1268,7 +1260,7 @@ func handleConn(conn net.Conn) {
 		exec := false
 		for totalConsumed < len(buffer[:n]) || len(cmdQueue) > 0 {
 			var (
-				args []string
+				args     []string
 				consumed int
 			)
 			// if cmdQueue is not empty and exec = true, execute commands
@@ -1490,6 +1482,22 @@ func handleConn(conn net.Conn) {
 					return
 				}
 				multi = true
+			case "EXEC":
+				if !multi {
+					// haven't called MULTI
+					_, err = c.Conn.Write([]byte("-ERR EXEC without MULTI\r\n"))
+					if err != nil {
+						// handle error
+						return
+					}
+				}
+				multi = false
+				exec = true
+				_, err = c.Conn.Write([]byte("*" + strconv.Itoa(len(cmdQueue)) + "\r\n"))
+				if err != nil {
+					// handle error
+					return
+				}
 			}
 			if !exec {
 				// if exec, consumed has been counted
