@@ -883,6 +883,12 @@ func (c *Conn) runXREAD(args []string) error {
 		queries = append(queries, []string{args[i], args[i+len(args)/2]})
 	}
 
+	_, err := c.Conn.Write([]byte("*" + strconv.Atoi(len(queries)) + "\r\n"))
+	if err != nil {
+		// handle error
+		return err
+	}
+
 	for _, q := range queries {
 		mu.Lock()
 		streamRaw, ok := streams.Load(q[0])
@@ -905,7 +911,7 @@ func (c *Conn) runXREAD(args []string) error {
 
 		// encode a RESP response
 		// 0. prefix
-		_, err := c.Conn.Write([]byte("*1\r\n*2\r\n"))
+		_, err = c.Conn.Write([]byte("*2\r\n"))
 		if err != nil {
 			// handle error
 			return err
