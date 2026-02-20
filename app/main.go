@@ -1265,6 +1265,9 @@ func handleConn(conn net.Conn) {
 		// parse args
 		totalConsumed := 0
 
+		// this for loop is for a single (line of) command outside exec mode
+		// so the loop condition shall contain exec when cmdQueue is not 0
+		// in case a blocked command makes len(cmdQueue) > 0 and block the next command's arrival
 		for totalConsumed < len(buffer[:n]) || len(cmdQueue) > 0 && exec {
 			var (
 				args     []string
@@ -1503,6 +1506,20 @@ func handleConn(conn net.Conn) {
 				// remember to update totalConsumed here or EXEC may be considered as a command inside cmdQueue
 				totalConsumed += consumed
 				_, err = c.Conn.Write([]byte("*" + strconv.Itoa(len(cmdQueue)) + "\r\n"))
+				if err != nil {
+					// handle error
+					return
+				}
+			case "DISCARD":
+				if !multi {
+					// haven't called MULTI
+					_, _ = c.Conn.Write([]byte("-ERR DISCARD without MULTI\r\n"))
+					return
+				}
+				multi = false
+				// discard cmdQueue
+				cmdQueue = [][]string{}
+				_, err = c.Conn.Write([]byte("+OK\r\n"))
 				if err != nil {
 					// handle error
 					return
