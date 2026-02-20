@@ -1103,6 +1103,7 @@ func (c *Conn) runINCR(args []string) error {
 		// not exist
 		// store back a nil value
 		variables.Store(args[0], Value{"0", time.Now().Add(time.Duration(math.MaxInt32) * time.Second)})
+		valRaw, _ = variables.Load(args[0])
 	}
 	val, ok := valRaw.(Value)
 	if !ok {
