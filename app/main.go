@@ -1492,6 +1492,8 @@ func handleConn(conn net.Conn) {
 				}
 				multi = false
 				exec = true
+				// remember to update totalConsumed here or EXEC may be considered as a command inside cmdQueue
+				totalConsumed += consumed
 				_, err = c.Conn.Write([]byte("*" + strconv.Itoa(len(cmdQueue)) + "\r\n"))
 				if err != nil {
 					// handle error
