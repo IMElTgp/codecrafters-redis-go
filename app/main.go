@@ -1262,7 +1262,7 @@ func handleConn(conn net.Conn) {
 		// parse args
 		totalConsumed := 0
 
-		for totalConsumed < len(buffer[:n]) || len(cmdQueue) > 0 && exec {
+		for totalConsumed < len(buffer[:n]) || len(cmdQueue) > 0 {
 			var (
 				args     []string
 				consumed int
@@ -1283,6 +1283,9 @@ func handleConn(conn net.Conn) {
 				if err != nil {
 					// handle error
 					return
+				}
+				if consumed == 0 {
+					break
 				}
 			}
 			if len(args) == 0 {
