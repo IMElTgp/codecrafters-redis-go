@@ -883,7 +883,7 @@ func (c *Conn) runXREAD(args []string) error {
 		queries = append(queries, []string{args[i], args[i+len(args)/2]})
 	}
 
-	_, err := c.Conn.Write([]byte("*" + strconv.Atoi(len(queries)) + "\r\n"))
+	_, err := c.Conn.Write([]byte("*" + strconv.Itoa(len(queries)) + "\r\n"))
 	if err != nil {
 		// handle error
 		return err
