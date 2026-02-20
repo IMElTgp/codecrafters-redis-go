@@ -877,10 +877,11 @@ func (c *Conn) runXREAD(args []string) error {
 	// if len(args) != 2 {
 	// 	return fmt.Errorf("XREAD: argument count mismatch")
 	//}
+	// for multiple queries
 	queries := [][]string{}
 
-	for i := 0; i < len(args)/2; i++ {
-		queries = append(queries, []string{args[i], args[i+len(args)/2]})
+	for i := 1; i < (len(args)+1)/2; i++ {
+		queries = append(queries, []string{args[i], args[i+(len(args)-1)/2]})
 	}
 
 	_, err := c.Conn.Write([]byte("*" + strconv.Itoa(len(queries)) + "\r\n"))
@@ -1117,7 +1118,7 @@ func handleConn(conn net.Conn) {
 					return
 				}
 			case "XREAD":
-				if c.runXREAD(args[2:]) != nil {
+				if c.runXREAD(args[1:]) != nil {
 					return
 				}
 			}
