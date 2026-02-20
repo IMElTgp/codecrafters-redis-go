@@ -1291,6 +1291,10 @@ func handleConn(conn net.Conn) {
 				if c.runXREAD(args[1:]) != nil {
 					return
 				}
+			case "INCR":
+				if c.runINCR(args[1:]) != nil {
+					return
+				}
 			}
 
 			totalConsumed += consumed
