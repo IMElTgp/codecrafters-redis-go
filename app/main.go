@@ -1091,6 +1091,37 @@ func (c *Conn) runXREAD(args []string) error {
 	return nil
 }
 
+func (c *Conn) runINCR(args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("INCR: argument count mismatch")
+	}
+
+	mu.Lock()
+	// increment the value of a key by 1
+	valRaw, ok := variables.Load(args[0])
+	if !ok {
+		// not implemented
+	}
+	val, ok := valRaw.(Value)
+	if !ok {
+		mu.Unlock()
+		return fmt.Errorf("INCR: value type mismatch")
+	}
+
+	valNum, err := strconv.Atoi(val.Val)
+	if err != nil {
+		// handle error
+		mu.Unlock()
+		return err
+	}
+
+	variables.Store(args[0], Value{strconv.Itoa(valNum + 1), val.Ex})
+
+	mu.Unlock()
+
+	return nil
+}
+
 // a RESP argument parser
 func parseArgs(msg string) (args []string, consumed int, err error) {
 	// msg = strings.TrimSpace(msg)
