@@ -1265,7 +1265,7 @@ func handleConn(conn net.Conn) {
 		// parse args
 		totalConsumed := 0
 
-		for totalConsumed < len(buffer[:n]) || len(cmdQueue) > 0 {
+		for totalConsumed < len(buffer[:n]) || len(cmdQueue) > 0 && exec {
 			var (
 				args     []string
 				consumed int
