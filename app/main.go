@@ -1535,6 +1535,10 @@ func handleConn(conn net.Conn) {
 					// handle error
 					return
 				}
+			case "INFO":
+				if c.runINFO(args[1:]) != nil {
+					return
+				}
 			}
 		skip:
 			if !exec {
