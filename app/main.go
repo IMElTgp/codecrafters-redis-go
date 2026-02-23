@@ -1246,9 +1246,10 @@ func (c *Conn) runINFO(args []string) error {
 		return fmt.Errorf("INFO: argument count mismatch")
 	}
 
-	role := "slave"
-	if serverRole {
-		role = "master"
+	// default role: master
+	role := "master"
+	if !serverRole {
+		role = "slave"
 	}
 
 	_, err := c.Conn.Write([]byte(serialize("role:" + role)))
