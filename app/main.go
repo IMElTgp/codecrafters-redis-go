@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"math"
@@ -215,6 +216,7 @@ func (c *Conn) runRPUSH(args []string) error {
 		return err
 	}
 
+	// whether to try to wake up waiters(BLPOP)
 	appended := false
 
 	for _, arg := range args[1:] {
@@ -1541,7 +1543,12 @@ func main() {
 
 	// Uncomment the code below to pass the first stage
 
-	l, err := net.Listen("tcp", "0.0.0.0:6379")
+	port := flag.Int("port", 6379, "server port")
+	flag.Parse()
+
+	address := "0.0.0.0:" + strconv.Itoa(*port)
+
+	l, err := net.Listen("tcp", address)
 	if err != nil {
 		fmt.Println("Failed to bind to port 6379")
 		os.Exit(1)
