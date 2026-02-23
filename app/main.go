@@ -1157,6 +1157,21 @@ func (c *Conn) runMULTI(args []string) error {
 	return err
 }
 
+func (c *Conn) runINFO(args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("INFO: argument count mismatch")
+	}
+
+	// default role: master
+	role := "master"
+	if !serverRole {
+		role = "slave"
+	}
+
+	_, err := c.Conn.Write([]byte(serialize("role:" + role + "master_replid:8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb" + "master_repl_offset:0")))
+	return err
+}
+
 // a RESP argument parser
 func parseArgs(msg string) (args []string, consumed int, err error) {
 	if len(msg) == 0 {
@@ -1241,21 +1256,6 @@ func (c *Conn) processMULTI(q [][]string, args []string) ([][]string, error) {
 		return nil, err
 	}
 	return q, nil
-}
-
-func (c *Conn) runINFO(args []string) error {
-	if len(args) != 1 {
-		return fmt.Errorf("INFO: argument count mismatch")
-	}
-
-	// default role: master
-	role := "master"
-	if !serverRole {
-		role = "slave"
-	}
-
-	_, err := c.Conn.Write([]byte(serialize("role:" + role)))
-	return err
 }
 
 // working function which carries logics related to client serving
