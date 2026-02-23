@@ -71,7 +71,9 @@ var notify sync.Map // Map[string]chan struct{}
 var notifyXREAD sync.Map // Map[string]chan struct{}
 
 // a global boolean variable to mark the server's role
-var serverRole bool
+// false for slave and true for master
+// default: true
+var serverRole = true
 
 // tool function for getting list copy from Map
 func getCopy(key string) ([]any, error) {
