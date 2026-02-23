@@ -1232,6 +1232,15 @@ func (c *Conn) processMULTI(q [][]string, args []string) ([][]string, error) {
 	return q, nil
 }
 
+func (c *Conn) runINFO(args []string) error {
+	if len(args) != 1 {
+		return fmt.Errorf("INFO: argument count mismatch")
+	}
+
+	_, err := c.Conn.Write([]byte(serialize("role:master")))
+	return err
+}
+
 // working function which carries logics related to client serving
 func handleConn(conn net.Conn) {
 	defer func() {
