@@ -42,6 +42,12 @@ type Waiter struct {
 	ch     chan struct{} // to signal this waiter
 }
 
+// Config is for <host, port> binary tuple
+type Config struct {
+	host string
+	port string
+}
+
 // Stream is type stream
 type Stream []Entry
 
@@ -63,6 +69,9 @@ var notify sync.Map // Map[string]chan struct{}
 // a global hash map for notifying XREAD
 // string(stream name) -> []Waiter
 var notifyXREAD sync.Map // Map[string]chan struct{}
+
+// a global boolean variable to mark the server's role
+var serverRole bool
 
 // tool function for getting list copy from Map
 func getCopy(key string) ([]any, error) {
@@ -1237,7 +1246,12 @@ func (c *Conn) runINFO(args []string) error {
 		return fmt.Errorf("INFO: argument count mismatch")
 	}
 
-	_, err := c.Conn.Write([]byte(serialize("role:master")))
+	role := "slave"
+	if serverRole {
+		role = "master"
+	}
+
+	_, err := c.Conn.Write([]byte(serialize("role:" + role)))
 	return err
 }
 
@@ -1550,16 +1564,32 @@ func handleConn(conn net.Conn) {
 	}
 }
 
+// parse CLI arguments
+func parseCLIArgs(args []string) (int, Config) {
+	port := flag.Int("port", 6379, "server port")
+	replicaof := flag.String("replicaof", "master 6379", "replication of this server")
+	flag.Parse()
+
+	hostAndPort := strings.Split(*replicaof, " ")
+	masHost, masPort := hostAndPort[0], hostAndPort[1]
+
+	return *port, Config{masHost, masPort}
+}
+
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
 
 	// Uncomment the code below to pass the first stage
 
-	port := flag.Int("port", 6379, "server port")
-	flag.Parse()
+	port, config := parseCLIArgs(os.Args)
 
-	address := "0.0.0.0:" + strconv.Itoa(*port)
+	if config.port != strconv.Itoa(port) {
+		// this server's master is not itself, which indicates that it is the slave
+		serverRole = false
+	}
+
+	address := "0.0.0.0:" + strconv.Itoa(port)
 
 	l, err := net.Listen("tcp", address)
 	if err != nil {
