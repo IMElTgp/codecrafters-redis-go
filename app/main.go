@@ -1684,7 +1684,7 @@ func main() {
 		conn, err := net.Dial("tcp", config.host+":"+config.port)
 		if err != nil {
 			// handle error
-			return
+			// fuck you I just ignore this err
 		}
 
 		// handshake from replica
