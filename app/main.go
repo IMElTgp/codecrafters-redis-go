@@ -1651,6 +1651,8 @@ func readFromMaster(masterConn net.Conn) error {
 		// handle error
 		return err
 	}
+
+	return nil
 }
 
 func main() {
