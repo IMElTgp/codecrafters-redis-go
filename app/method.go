@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"math"
 	"sort"
@@ -972,8 +973,14 @@ func (c *Conn) runPSYNC(args []string) error {
 		return err
 	}
 
+	// hard code an empty RDB file
 	emptyRDB := "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog=="
-	_, err = c.Conn.Write([]byte(strings.TrimRight(serialize(emptyRDB), "\r\n")))
+	data, err := base64.StdEncoding.DecodeString(emptyRDB)
+	if err != nil {
+		// handle error
+		return err
+	}
+	_, err = c.Conn.Write([]byte(strings.TrimRight(serialize(data), "\r\n")))
 
 	return err
 }
