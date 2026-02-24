@@ -980,7 +980,7 @@ func (c *Conn) runPSYNC(args []string) error {
 		// handle error
 		return err
 	}
-	_, err = c.Conn.Write([]byte(strings.TrimRight(serialize(data), "\r\n")))
+	_, err = c.Conn.Write([]byte(strings.TrimRight(serialize(string(data)), "\r\n")))
 
 	return err
 }
