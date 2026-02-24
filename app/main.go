@@ -1619,7 +1619,7 @@ func main() {
 	}
 
 	if sendHandshake(config.host, config.port) != nil {
-		return
+		// do nothing
 	}
 
 	address := "0.0.0.0:" + strconv.Itoa(port)
