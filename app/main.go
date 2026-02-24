@@ -1594,8 +1594,16 @@ func handleConn(conn net.Conn) {
 
 // parse CLI arguments
 func parseCLIArgs(args []string) (int, Config) {
+	defaultValue := ""
+	for _, arg := range args {
+		if arg == "--replicaof" {
+			defaultValue = "master 6379"
+			break
+		}
+	}
+
 	port := flag.Int("port", 6379, "server port")
-	replicaof := flag.String("replicaof", "master 6379", "replication of this server")
+	replicaof := flag.String("replicaof", defaultValue, "replication of this server")
 	flag.Parse()
 
 	hostAndPort := strings.Split(*replicaof, " ")
