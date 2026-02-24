@@ -1553,6 +1553,14 @@ func handleConn(conn net.Conn) {
 					return
 				}
 			case "INFO":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					goto skip
+				}
 				if c.runINFO(args[1:]) != nil {
 					return
 				}
@@ -1577,6 +1585,22 @@ func parseCLIArgs(args []string) (int, Config) {
 	masHost, masPort := hostAndPort[0], hostAndPort[1]
 
 	return *port, Config{masHost, masPort}
+}
+
+func (c *Conn) sendHandshake() error {
+	if serverRole {
+		return
+	}
+	// replica sends a PING to the master
+	err := c.runPING()
+	if err != nil {
+		// handle error
+		return err
+	}
+
+	// replica sends REPLCONF twice and PSYNC
+	_, err = c.Conn.Write([]byte(serialize("REPLCONF") + serialize("REPLCONF") + serialize("PSYNC")))
+	return err
 }
 
 func main() {
