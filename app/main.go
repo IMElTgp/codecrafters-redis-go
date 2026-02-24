@@ -1668,6 +1668,7 @@ func main() {
 		serverRole = false
 	}
 
+	// replica
 	if !serverRole {
 		conn, err := net.Dial("tcp", config.host+":"+config.port)
 		if err != nil {
