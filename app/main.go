@@ -1703,7 +1703,7 @@ func main() {
 	}()
 
 	for {
-		conn, err = l.Accept()
+		conn, err := l.Accept()
 		if err != nil {
 			// handle error
 			return
