@@ -2,6 +2,12 @@ package main
 
 import "net"
 
+/**
+ * handshake.go
+ * handles handshake that happens between replica and master
+ * one PING, two REPLCONF and one PSYNC
+ */
+
 func sendPING(masterHost, masterPort string, masterConn net.Conn) error {
 	if serverRole {
 		return nil
@@ -12,6 +18,7 @@ func sendPING(masterHost, masterPort string, masterConn net.Conn) error {
 
 }
 
+// sendREPLCONF1 is responsible for sending listening-port
 func sendREPLCONF1(masterPort string, masterConn net.Conn) error {
 	if serverRole {
 		return nil
@@ -21,6 +28,7 @@ func sendREPLCONF1(masterPort string, masterConn net.Conn) error {
 	return err
 }
 
+// sendREPLCONF2 is responsible for sending capa and npsync2 (hard coded so far)
 func sendREPLCONF2(masterConn net.Conn) error {
 	if serverRole {
 		return nil
