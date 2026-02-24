@@ -1177,6 +1177,11 @@ func (c *Conn) runREPLCONF(args []string) error {
 	return err
 }
 
+func (c *Conn) runPSYNC(args []string) error {
+	_, err := c.Conn.Write([]byte("+FULLRESYNC 8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb 0\r\n"))
+	return err
+}
+
 // a RESP argument parser
 func parseArgs(msg string) (args []string, consumed int, err error) {
 	if len(msg) == 0 {
@@ -1581,6 +1586,18 @@ func handleConn(conn net.Conn) {
 				if c.runREPLCONF(args[1:]) != nil {
 					return
 				}
+			case "PSYNC":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					goto skip
+				}
+				if c.runPSYNC(args[1:]) != nil {
+					return
+				}
 			}
 		skip:
 			if !exec {
@@ -1652,6 +1669,15 @@ func sendREPLCONF2(masterConn net.Conn) error {
 	return err
 }
 
+func sendPSYNC(masterConn net.Conn) error {
+	if serverRole {
+		return nil
+	}
+
+	_, err := masterConn.Write([]byte("*3\r\n" + serialize("PSYNC") + serialize("?") + serialize("-1")))
+	return err
+}
+
 func readFromMaster(masterConn net.Conn) error {
 	if serverRole {
 		return nil
@@ -1700,6 +1726,8 @@ func main() {
 		_ = sendREPLCONF1(strconv.Itoa(port), conn)
 		_ = readFromMaster(conn)
 		_ = sendREPLCONF2(conn)
+		_ = readFromMaster(conn)
+		_ = sendPSYNC(conn)
 		_ = readFromMaster(conn)
 	}
 
