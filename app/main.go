@@ -1587,19 +1587,20 @@ func parseCLIArgs(args []string) (int, Config) {
 	return *port, Config{masHost, masPort}
 }
 
-func (c *Conn) sendHandshake() error {
+func sendHandshake(masterHost, masterPort string) error {
 	if serverRole {
-		return
+		return nil
 	}
-	// replica sends a PING to the master
-	err := c.runPING()
+
+	masterConn, err := net.Dial("tcp", masterHost+":"+masterPort)
 	if err != nil {
 		// handle error
 		return err
 	}
 
+	// replica sends a PING to the master
 	// replica sends REPLCONF twice and PSYNC
-	_, err = c.Conn.Write([]byte(serialize("REPLCONF") + serialize("REPLCONF") + serialize("PSYNC")))
+	_, err = masterConn.Write([]byte(serialize("PING") + serialize("REPLCONF") + serialize("REPLCONF") + serialize("PSYNC")))
 	return err
 }
 
@@ -1615,6 +1616,8 @@ func main() {
 		// this server's master is not itself, which indicates that it is the slave
 		serverRole = false
 	}
+
+	sendHandshake(config.host, config.port)
 
 	address := "0.0.0.0:" + strconv.Itoa(port)
 
