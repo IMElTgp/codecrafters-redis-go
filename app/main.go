@@ -1641,6 +1641,18 @@ func sendREPLCONF2(masterConn net.Conn) error {
 	return err
 }
 
+func readFromMaster(masterConn net.Conn) error {
+	if serverRole {
+		return nil
+	}
+	buffer := make([]byte, 1024)
+	_, err := masterConn.Read(buffer)
+	if err != nil {
+		// handle error
+		return err
+	}
+}
+
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
 	fmt.Println("Logs from your program will appear here!")
@@ -1663,8 +1675,11 @@ func main() {
 	// handshake from replica
 	// master simply skips these and handle them in handleConn(l.Accept()) later
 	_ = sendPING(config.host, config.port, conn)
+	_ = readFromMaster(conn)
 	_ = sendREPLCONF1(config.port, conn)
+	_ = readFromMaster(conn)
 	_ = sendREPLCONF2(conn)
+	_ = readFromMaster(conn)
 
 	address := "0.0.0.0:" + strconv.Itoa(port)
 
