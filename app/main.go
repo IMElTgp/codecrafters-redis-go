@@ -1600,7 +1600,7 @@ func sendHandshake(masterHost, masterPort string) error {
 
 	// replica sends a PING to the master
 	// replica sends REPLCONF twice and PSYNC
-	_, err = masterConn.Write([]byte(serialize("PING") + serialize("REPLCONF") + serialize("REPLCONF") + serialize("PSYNC")))
+	_, err = masterConn.Write([]byte("*1\r\n" + serialize("PING") + "*2\r\n" + serialize("REPLCONF") + serialize("REPLCONF") + "*1\r\n" + serialize("PSYNC")))
 	return err
 }
 
@@ -1617,7 +1617,9 @@ func main() {
 		serverRole = false
 	}
 
-	sendHandshake(config.host, config.port)
+	if sendHandshake(config.host, config.port) != nil {
+		return
+	}
 
 	address := "0.0.0.0:" + strconv.Itoa(port)
 
