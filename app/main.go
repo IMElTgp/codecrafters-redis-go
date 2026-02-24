@@ -1668,27 +1668,29 @@ func main() {
 		serverRole = false
 	}
 
-	conn, err := net.Dial("tcp", config.host+":"+config.port)
-	if err != nil {
-		// handle error
-		return
-	}
+	if !serverRole {
+		conn, err := net.Dial("tcp", config.host+":"+config.port)
+		if err != nil {
+			// handle error
+			return
+		}
 
-	// handshake from replica
-	// master simply skips these and handle them in handleConn(l.Accept()) later
-	_ = sendPING(config.host, config.port, conn)
-	// read from master to avoid continuous writing
-	_ = readFromMaster(conn)
-	_ = sendREPLCONF1(strconv.Itoa(port), conn)
-	_ = readFromMaster(conn)
-	_ = sendREPLCONF2(conn)
-	_ = readFromMaster(conn)
+		// handshake from replica
+		// master simply skips these and handle them in handleConn(l.Accept()) later
+		_ = sendPING(config.host, config.port, conn)
+		// read from master to avoid continuous writing
+		_ = readFromMaster(conn)
+		_ = sendREPLCONF1(strconv.Itoa(port), conn)
+		_ = readFromMaster(conn)
+		_ = sendREPLCONF2(conn)
+		_ = readFromMaster(conn)
+	}
 
 	address := "0.0.0.0:" + strconv.Itoa(port)
 
 	l, err := net.Listen("tcp", address)
 	if err != nil {
-		fmt.Println("Failed to bind to port 6379")
+		fmt.Println("Failed to bind to port" + strconv.Itoa(port))
 		os.Exit(1)
 	}
 
