@@ -1600,7 +1600,8 @@ func sendHandshake(masterHost, masterPort string) error {
 
 	// replica sends a PING to the master
 	// replica sends REPLCONF twice and PSYNC
-	_, err = masterConn.Write([]byte("*1\r\n" + serialize("PING") + "*2\r\n" + serialize("REPLCONF") + serialize("REPLCONF") + "*1\r\n" + serialize("PSYNC")))
+	// _, err = masterConn.Write([]byte("*1\r\n" + serialize("PING") + "*2\r\n" + serialize("REPLCONF") + serialize("REPLCONF") + "*1\r\n" + serialize("PSYNC")))
+	_, err = masterConn.Write([]byte("*1\r\n" + serialize("PING")))
 	return err
 }
 
