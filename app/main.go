@@ -1677,8 +1677,9 @@ func main() {
 	// handshake from replica
 	// master simply skips these and handle them in handleConn(l.Accept()) later
 	_ = sendPING(config.host, config.port, conn)
+	// read from master to avoid continuous writing
 	_ = readFromMaster(conn)
-	_ = sendREPLCONF1(config.port, conn)
+	_ = sendREPLCONF1(port, conn)
 	_ = readFromMaster(conn)
 	_ = sendREPLCONF2(conn)
 	_ = readFromMaster(conn)
