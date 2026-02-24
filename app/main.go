@@ -1679,12 +1679,17 @@ func main() {
 		serverRole = false
 	}
 
+	if config.port == "" {
+		// fix: master itself may not provide replica, which leads config.port to be empty
+		serverRole = true
+	}
+
 	// replica
 	if !serverRole {
 		conn, err := net.Dial("tcp", config.host+":"+config.port)
 		if err != nil {
 			// handle error
-			// fuck you I just ignore this err
+			return
 		}
 
 		// handshake from replica
