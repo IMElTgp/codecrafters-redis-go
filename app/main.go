@@ -1607,6 +1607,9 @@ func parseCLIArgs(args []string) (int, Config) {
 	flag.Parse()
 
 	hostAndPort := strings.Split(*replicaof, " ")
+	if len(hostAndPort) == 0 {
+		return *port, Config{}
+	}
 	masHost, masPort := hostAndPort[0], hostAndPort[1]
 
 	return *port, Config{masHost, masPort}
