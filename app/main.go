@@ -1172,6 +1172,11 @@ func (c *Conn) runINFO(args []string) error {
 	return err
 }
 
+func (c *Conn) runREPLCONF(args []string) error {
+	_, err := c.Conn.Write([]byte("+OK\r\n"))
+	return err
+}
+
 // a RESP argument parser
 func parseArgs(msg string) (args []string, consumed int, err error) {
 	if len(msg) == 0 {
@@ -1564,6 +1569,18 @@ func handleConn(conn net.Conn) {
 				if c.runINFO(args[1:]) != nil {
 					return
 				}
+			case "REPLCONF":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					goto skip
+				}
+				if c.runREPLCONF(args[1:]) != nil {
+					return
+				}
 			}
 		skip:
 			if !exec {
@@ -1587,33 +1604,40 @@ func parseCLIArgs(args []string) (int, Config) {
 	return *port, Config{masHost, masPort}
 }
 
-func sendHandshake(masterHost, masterPort string) error {
+func sendPING(masterHost, masterPort string, masterConn net.Conn) error {
 	if serverRole {
 		return nil
 	}
 
-	masterConn, err := net.Dial("tcp", masterHost+":"+masterPort)
+	/*masterConn, err := net.Dial("tcp", masterHost+":"+masterPort)
 	if err != nil {
 		// handle error
 		return err
-	}
+	}*/
 
 	// replica sends a PING to the master
 	// replica sends REPLCONF twice and PSYNC
 	// _, err = masterConn.Write([]byte("*1\r\n" + serialize("PING") + "*2\r\n" + serialize("REPLCONF") + serialize("REPLCONF") + "*1\r\n" + serialize("PSYNC")))
-	_, err = masterConn.Write([]byte("*1\r\n" + serialize("PING")))
-	if err != nil {
-		// handle error
-		return err
+	_, err := masterConn.Write([]byte("*1\r\n" + serialize("PING")))
+	return err
+
+}
+
+func sendREPLCONF1(masterPort string, masterConn net.Conn) error {
+	if serverRole {
+		return nil
 	}
 
-	_, err = masterConn.Write([]byte("*3\r\n" + serialize("REPLCONF") + serialize("listening-port") + serialize(masterPort)))
-	if err != nil {
-		// handle error
-		return err
+	_, err := masterConn.Write([]byte("*3\r\n" + serialize("REPLCONF") + serialize("listening-port") + serialize(masterPort)))
+	return err
+}
+
+func sendREPLCONF2(masterConn net.Conn) error {
+	if serverRole {
+		return nil
 	}
 
-	_, err = masterConn.Write([]byte("*3\r\n" + serialize("REPLCONF") + serialize("ncapa") + serialize("npsync2")))
+	_, err := masterConn.Write([]byte("*3\r\n" + serialize("REPLCONF") + serialize("capa") + serialize("npsync2")))
 	return err
 }
 
@@ -1630,9 +1654,17 @@ func main() {
 		serverRole = false
 	}
 
-	if sendHandshake(config.host, config.port) != nil {
-		// do nothing
+	conn, err := net.Dial("tcp", config.host+":"+config.port)
+	if err != nil {
+		// handle error
+		return
 	}
+
+	// handshake from replica
+	// master simply skips these and handle them in handleConn(l.Accept()) later
+	_ = sendPING(config.host, config.port, conn)
+	_ = sendREPLCONF1(config.port, conn)
+	_ = sendREPLCONF2(conn)
 
 	address := "0.0.0.0:" + strconv.Itoa(port)
 
@@ -1651,7 +1683,7 @@ func main() {
 	}()
 
 	for {
-		conn, err := l.Accept()
+		conn, err = l.Accept()
 		if err != nil {
 			// handle error
 			return
