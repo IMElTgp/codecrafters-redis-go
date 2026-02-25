@@ -12,7 +12,7 @@ type Conn struct {
 }
 
 // all replica connections for propagation
-var replicaConns map[net.Conn]bool
+var replicaConns = make(map[net.Conn]bool)
 
 // working function which carries logics related to client serving
 func handleConn(conn net.Conn) {
