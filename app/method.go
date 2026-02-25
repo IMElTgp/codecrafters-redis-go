@@ -975,11 +975,13 @@ func (c *Conn) runPSYNC(args []string) error {
 
 	// hard code an empty RDB file
 	emptyRDB := "UkVESVMwMDEx+glyZWRpcy12ZXIFNy4yLjD6CnJlZGlzLWJpdHPAQPoFY3RpbWXCbQi8ZfoIdXNlZC1tZW3CsMQQAPoIYW9mLWJhc2XAAP/wbjv+wP9aog=="
+	// call DecodeString to decode that into binary
 	data, err := base64.StdEncoding.DecodeString(emptyRDB)
 	if err != nil {
 		// handle error
 		return err
 	}
+	// RDB file doesn't have trailing \r\n, which is different from common bulk strings
 	_, err = c.Conn.Write([]byte(strings.TrimRight(serialize(string(data)), "\r\n")))
 
 	return err

@@ -30,6 +30,18 @@ func handleConn(conn net.Conn) {
 	cmdQueue := [][]string{}
 	// exec mode
 	exec := false
+	// whether the command is from replica
+	fromReplica := false
+	// write command list
+	isWriteCmd := map[string]bool{
+		"SET":   true,
+		"RPUSH": true,
+		"LPUSH": true,
+		"LPOP":  true,
+		"BLPOP": true,
+		"XADD":  true,
+		"INCR":  true,
+	}
 
 	for {
 		// for multiple commands in a line, which I haven't seen in test cases
@@ -78,6 +90,12 @@ func handleConn(conn net.Conn) {
 			if len(args) == 0 {
 				return
 			}
+
+			// judge if the incoming msg is from replica handshake
+			if strings.ToUpper(args[0]) == "PSYNC" {
+				fromReplica = true
+			}
+
 			switch strings.ToUpper(args[0]) {
 			case "PING":
 				if multi {
@@ -339,6 +357,25 @@ func handleConn(conn net.Conn) {
 					goto skip
 				}
 				if c.runPSYNC(args[1:]) != nil {
+					return
+				}
+			}
+			// do propagation
+			// this should NOT be put inside `skip` label
+			if !fromReplica && serverRole && isWriteCmd[args[0]] {
+				// propagation needs three conditions met:
+				// 1. this server is master
+				// 2. this command is not from replica
+				// 3. this command is a write command
+
+				// encode these arguments into a RESP array
+				propagation := "*" + strconv.Itoa(len(args)) + "\r\n"
+				for _, arg := range args {
+					propagation += serialize(arg)
+				}
+				_, err = conn.Write([]byte(propagation))
+				if err != nil {
+					// handle error
 					return
 				}
 			}
