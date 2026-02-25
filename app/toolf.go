@@ -150,7 +150,7 @@ func parseArgs(msg string) (args []string, consumed int, err error) {
 
 	argCntBegin, argCntEnd := -1, -1
 	for i, b := range msg {
-		if b == '*' && (i+1 < len(msg) && msg[i+1] == '\r' || i+1 == len(msg)) && argCntBegin == -1 {
+		if b == '*' && (i+1 < len(msg) && msg[i+1] >= '0' && msg[i+1] <= '9') && argCntBegin == -1 {
 			argCntBegin = i + 1
 		}
 		if b == '\r' {
