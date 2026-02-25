@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"net"
 	"strconv"
@@ -109,9 +108,6 @@ func handleConn(c *Conn) {
 				replicaConns[c.Conn] = true
 				mu.Unlock()
 			}
-
-			// for parseArgs testing
-			fmt.Println("are we there?")
 
 			switch strings.ToUpper(args[0]) {
 			case "PING":
@@ -361,7 +357,6 @@ func handleConn(c *Conn) {
 					return
 				}
 			case "REPLCONF":
-				fmt.Println("we are here ")
 				if multi {
 					cmdQueue, err = c.processMULTI(cmdQueue, args)
 					if err != nil {
