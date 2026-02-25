@@ -963,7 +963,7 @@ func (c *Conn) runINFO(args []string) error {
 }
 
 func (c *Conn) runREPLCONF(args []string) error {
-	fmt.Println(len(args))
+	/*fmt.Println(len(args))
 
 	for _, arg := range args {
 		fmt.Println(arg)
@@ -975,7 +975,9 @@ func (c *Conn) runREPLCONF(args []string) error {
 	}
 
 	_, err := c.write([]byte("+OK\r\n"))
-	return err
+	return err*/
+	fmt.Println(args)
+	return nil
 }
 
 func (c *Conn) runPSYNC(args []string) error {
