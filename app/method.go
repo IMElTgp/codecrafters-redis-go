@@ -963,7 +963,7 @@ func (c *Conn) runINFO(args []string) error {
 }
 
 func (c *Conn) runREPLCONF(args []string) error {
-	if len(args) == 2 && strings.ToUpper(args[0]) == "GETACK" {
+	if len(args) == 2 && args[0] != "listening-port" {
 		// REPLCONF GETACK *
 		_, err := c.Conn.Write([]byte("*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n"))
 		return err
