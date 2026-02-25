@@ -964,7 +964,7 @@ func (c *Conn) runINFO(args []string) error {
 
 func (c *Conn) runREPLCONF(args []string) error {
 	if len(args) == 2 && args[1] == "*" && strings.ToUpper(args[0]) == "GETACK" {
-		rep := "*3\r\n" + serialize("REPLCONF")
+		rep := "*3\r\n" + serialize("REPLCONF") + serialize("ACK")
 		mu.Lock()
 		rep += serialize(strconv.Itoa(offset))
 		mu.Unlock()
