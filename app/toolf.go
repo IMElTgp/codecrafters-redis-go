@@ -136,7 +136,7 @@ func cmpID(id1, id2 string) int {
 
 // a RESP argument parser
 func parseArgs(msg string) (args []string, consumed int, err error) {
-	if msg == "*3\\r\\n$8\\r\\nREPLCONF\\r\\n$6\\r\\nGETACK\\r\\n$1\\r\\n*\\r\\n" {
+	if msg == "*3\r\n$8\r\nREPLCONF\r\n$6\r\nGETACK\r\n$1\r\n*\r\n" {
 		return []string{"REPLCONF", "GETACK", "*"}, len(msg), nil
 	}
 	if len(msg) == 0 {
