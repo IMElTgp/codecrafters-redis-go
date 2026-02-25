@@ -389,6 +389,7 @@ func handleConn(conn net.Conn) {
 						return
 					}
 				}
+				mu.Unlock()
 			}
 		skip:
 			if !exec {
