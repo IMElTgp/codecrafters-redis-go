@@ -57,10 +57,13 @@ func (c *Conn) runSET(args []string) error {
 	variables.Store(args[0], val)
 	mu.Unlock()
 
-	_, err = c.Conn.Write([]byte("+OK\r\n"))
-	if err != nil {
-		// handle error
-		return err
+	// replica shall not write a reply; same for the following write commands
+	if serverRole {
+		_, err = c.Conn.Write([]byte("+OK\r\n"))
+		if err != nil {
+			// handle error
+			return err
+		}
 	}
 
 	return nil
@@ -134,6 +137,7 @@ func (c *Conn) runRPUSH(args []string) error {
 	ch := getCh(args[0])
 	mu.Unlock()
 
+	// select block shall be outside the lock; same for the following code
 	if appended {
 		select {
 		case ch <- struct{}{}:
@@ -141,10 +145,12 @@ func (c *Conn) runRPUSH(args []string) error {
 		}
 	}
 
-	_, err = c.Conn.Write([]byte(":" + strconv.Itoa(listLen) + "\r\n"))
-	if err != nil {
-		// handle error
-		return err
+	if serverRole {
+		_, err = c.Conn.Write([]byte(":" + strconv.Itoa(listLen) + "\r\n"))
+		if err != nil {
+			// handle error
+			return err
+		}
 	}
 
 	return nil
@@ -180,10 +186,12 @@ func (c *Conn) runLPUSH(args []string) error {
 		}
 	}
 
-	_, err = c.Conn.Write([]byte(":" + strconv.Itoa(listLen) + "\r\n"))
-	if err != nil {
-		// handle error
-		return err
+	if serverRole {
+		_, err = c.Conn.Write([]byte(":" + strconv.Itoa(listLen) + "\r\n"))
+		if err != nil {
+			// handle error
+			return err
+		}
 	}
 
 	return nil
@@ -367,11 +375,13 @@ func (c *Conn) runLPOP(args []string) error {
 		}
 	}
 
-	for _, p := range popped {
-		_, err = c.Conn.Write([]byte(serialize(p)))
-		if err != nil {
-			// handle error
-			return err
+	if serverRole {
+		for _, p := range popped {
+			_, err = c.Conn.Write([]byte(serialize(p)))
+			if err != nil {
+				// handle error
+				return err
+			}
 		}
 	}
 
@@ -418,13 +428,15 @@ retryOnEmpty:
 			default:
 			}
 		}
-		_, err = c.Conn.Write([]byte("*2\r\n"))
-		if err != nil {
-			// handle error
+		if serverRole {
+			_, err = c.Conn.Write([]byte("*2\r\n"))
+			if err != nil {
+				// handle error
+				return err
+			}
+			_, err = c.Conn.Write([]byte(serialize(args[0]) + serialize(toPop)))
 			return err
 		}
-		_, err = c.Conn.Write([]byte(serialize(args[0]) + serialize(toPop)))
-		return err
 	}
 	mu.Unlock()
 
@@ -456,23 +468,27 @@ retryOnEmpty:
 			default:
 			}
 		}
-		// encode the RESP array
-		_, err = c.Conn.Write([]byte("*2\r\n"))
-		if err != nil {
-			// handle error
-			return err
-		}
-		_, err = c.Conn.Write([]byte(serialize(args[0]) + serialize(toPop.(string))))
-		if err != nil {
-			// handle error
-			return err
+		if serverRole {
+			// encode the RESP array
+			_, err = c.Conn.Write([]byte("*2\r\n"))
+			if err != nil {
+				// handle error
+				return err
+			}
+			_, err = c.Conn.Write([]byte(serialize(args[0]) + serialize(toPop.(string))))
+			if err != nil {
+				// handle error
+				return err
+			}
 		}
 	case <-time.After(time.Duration(1000*timeout) * time.Millisecond):
 		// timeout, return null array
-		_, err = c.Conn.Write([]byte("*-1\r\n"))
-		if err != nil {
-			// handle error
-			return err
+		if serverRole {
+			_, err = c.Conn.Write([]byte("*-1\r\n"))
+			if err != nil {
+				// handle error
+				return err
+			}
 		}
 	}
 
@@ -563,12 +579,16 @@ func (c *Conn) runXADD(args []string) error {
 	switch checkID(args[1], topElem) {
 	case TIME_NO_MISMATCH:
 		mu.Unlock()
-		_, err := c.Conn.Write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"))
-		return err
+		if serverRole {
+			_, err := c.Conn.Write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"))
+			return err
+		}
 	case INVALID_NO:
 		mu.Unlock()
-		_, err := c.Conn.Write([]byte("-ERR The ID specified in XADD must be greater than 0-0\r\n"))
-		return err
+		if serverRole {
+			_, err := c.Conn.Write([]byte("-ERR The ID specified in XADD must be greater than 0-0\r\n"))
+			return err
+		}
 	case UNKNOWN_ERROR:
 		mu.Unlock()
 		return fmt.Errorf("XADD: Unknown errors happened")
@@ -651,8 +671,12 @@ func (c *Conn) runXADD(args []string) error {
 	notifyXREAD.Store(args[0], waiters)
 	mu.Unlock()
 	// write back the entry id
-	_, err = c.Conn.Write([]byte(serialize(id)))
-	return err
+	if serverRole {
+		_, err = c.Conn.Write([]byte(serialize(id)))
+		return err
+	}
+
+	return nil
 }
 
 func (c *Conn) runXRANGE(args []string) error {
@@ -919,8 +943,10 @@ func (c *Conn) runINCR(args []string) error {
 		// key exists but doesn't have a numeric value
 		// return an error
 		mu.Unlock()
-		_, err = c.Conn.Write([]byte("-ERR value is not an integer or out of range\r\n"))
-		return err
+		if serverRole {
+			_, err = c.Conn.Write([]byte("-ERR value is not an integer or out of range\r\n"))
+			return err
+		}
 	}
 
 	variables.Store(args[0], Value{strconv.Itoa(valNum + 1), val.Ex})

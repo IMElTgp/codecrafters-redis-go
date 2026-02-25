@@ -379,7 +379,7 @@ func handleConn(conn net.Conn) {
 				for _, arg := range args {
 					propagation += serialize(arg)
 				}
-				// traverse all replica connections
+				// iterate all replica connections
 				mu.Lock()
 				for repConn := range replicaConns {
 					_, err = repConn.Write([]byte(propagation))
