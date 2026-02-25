@@ -50,7 +50,9 @@ func main() {
 		// set c.silent = true after handshake
 		c.silent = true
 		// new a goroutine to deal with master-replica communication (propagation), where replica shall be silent
+		fmt.Println("communication between master & replica is going to start")
 		go handleConn(c)
+		fmt.Println("communication between master & replica has begun")
 	}
 
 	address := "0.0.0.0:" + strconv.Itoa(port)
@@ -69,6 +71,7 @@ func main() {
 		}
 	}()
 
+	fmt.Println("server is going to accept client msg")
 	for {
 		conn, err := l.Accept()
 		if err != nil {
