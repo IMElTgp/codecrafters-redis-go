@@ -963,6 +963,8 @@ func (c *Conn) runINFO(args []string) error {
 }
 
 func (c *Conn) runREPLCONF(args []string) error {
+	fmt.Println(len(args))
+
 	for _, arg := range args {
 		fmt.Println(arg)
 	}
