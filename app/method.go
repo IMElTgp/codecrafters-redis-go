@@ -978,7 +978,7 @@ func (c *Conn) runREPLCONF(args []string) error {
 	return err*/
 	arg := args[0] + " " + args[1]
 	_, err := c.Conn.Write([]byte(arg))
-	return nil
+	return err
 }
 
 func (c *Conn) runPSYNC(args []string) error {
