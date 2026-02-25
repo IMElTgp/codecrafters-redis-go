@@ -976,7 +976,8 @@ func (c *Conn) runREPLCONF(args []string) error {
 
 	_, err := c.write([]byte("+OK\r\n"))
 	return err*/
-	fmt.Println(args)
+	arg := args[0] + " " + args[1]
+	_, err := c.Conn.Write([]byte(arg))
 	return nil
 }
 
