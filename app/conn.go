@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"net"
 	"strconv"
@@ -107,6 +108,10 @@ func handleConn(c *Conn) {
 				mu.Lock()
 				replicaConns[c.Conn] = true
 				mu.Unlock()
+			}
+
+			for _, arg := range args {
+				fmt.Println(arg + " ")
 			}
 
 			switch strings.ToUpper(args[0]) {
