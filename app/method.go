@@ -963,6 +963,10 @@ func (c *Conn) runINFO(args []string) error {
 }
 
 func (c *Conn) runREPLCONF(args []string) error {
+	for _, arg := range args {
+		_, _ = c.Conn.Write([]byte(arg))
+	}
+
 	if len(args) == 2 && strings.ToUpper(args[0]) == "ACK" {
 		_, err := c.write([]byte("+OK\r\n"))
 		return err
