@@ -49,7 +49,7 @@ func readFromMaster(c *Conn) error {
 	if serverRole {
 		return nil
 	}
-	buffer := make([]byte, 128)
+	buffer := make([]byte, 1024)
 	_, err := c.Conn.Read(buffer)
 	if err != nil {
 		// handle error
