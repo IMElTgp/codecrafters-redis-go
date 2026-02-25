@@ -49,7 +49,7 @@ func main() {
 
 		// set c.silent = true after handshake
 		c.silent = true
-
+		// new a goroutine to deal with master-replica communication (propagation), where replica shall be silent
 		go handleConn(c)
 	}
 
