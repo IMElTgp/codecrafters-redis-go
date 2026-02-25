@@ -361,6 +361,7 @@ func handleConn(c *Conn) {
 					return
 				}
 			case "REPLCONF":
+				fmt.Println("we are here ")
 				if multi {
 					cmdQueue, err = c.processMULTI(cmdQueue, args)
 					if err != nil {
