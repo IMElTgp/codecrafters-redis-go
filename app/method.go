@@ -963,21 +963,12 @@ func (c *Conn) runINFO(args []string) error {
 }
 
 func (c *Conn) runREPLCONF(args []string) error {
-	/*fmt.Println(len(args))
-
-	for _, arg := range args {
-		fmt.Println(arg)
-	}
-
-	if len(args) == 2 && strings.ToUpper(args[0]) == "GETACK" && args[1] == "*" {
+	if len(args) == 2 {
 		_, err := c.Conn.Write([]byte("*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n"))
 		return err
 	}
 
 	_, err := c.write([]byte("+OK\r\n"))
-	return err*/
-	arg := args[0] + " " + args[1]
-	_, err := c.Conn.Write([]byte(arg))
 	return err
 }
 
