@@ -111,7 +111,7 @@ func handleConn(c *Conn) {
 			}
 
 			// for parseArgs testing
-			fmt.Println("args got:", args)
+			fmt.Println("are we there?")
 
 			switch strings.ToUpper(args[0]) {
 			case "PING":
