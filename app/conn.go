@@ -110,6 +110,7 @@ func handleConn(c *Conn) {
 				mu.Unlock()
 			}
 
+			// for parseArgs testing
 			for _, arg := range args {
 				fmt.Println(arg + " ")
 			}
