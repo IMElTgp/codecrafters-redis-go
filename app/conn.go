@@ -11,6 +11,9 @@ type Conn struct {
 	Conn net.Conn
 }
 
+// all replica connections for propagation
+var replicaConns map[net.Conn]bool
+
 // working function which carries logics related to client serving
 func handleConn(conn net.Conn) {
 	defer func() {
@@ -94,6 +97,9 @@ func handleConn(conn net.Conn) {
 			// judge if the incoming msg is from replica handshake
 			if strings.ToUpper(args[0]) == "PSYNC" {
 				fromReplica = true
+				mu.Lock()
+				replicaConns[conn] = true
+				mu.Unlock()
 			}
 
 			switch strings.ToUpper(args[0]) {
@@ -373,10 +379,15 @@ func handleConn(conn net.Conn) {
 				for _, arg := range args {
 					propagation += serialize(arg)
 				}
-				_, err = conn.Write([]byte(propagation))
-				if err != nil {
-					// handle error
-					return
+				// traverse all replica connections
+				mu.Lock()
+				for repConn := range replicaConns {
+					_, err = repConn.Write([]byte(propagation))
+					if err != nil {
+						mu.Unlock()
+						// handle error
+						return
+					}
 				}
 			}
 		skip:
