@@ -150,10 +150,10 @@ func parseArgs(msg string) (args []string, consumed int, err error) {
 
 	argCntBegin, argCntEnd := -1, -1
 	for i, b := range msg {
-		if b == '*' && argCntBegin == -1 {
+		if b == '*' && (i+1 < len(msg) && msg[i+1] == '\r' || i+1 == len(msg)) && argCntBegin == -1 {
 			argCntBegin = i + 1
 		}
-		if b == '\r' && argCntEnd == -1 {
+		if b == '\r' {
 			argCntEnd = i
 			break
 		}
@@ -176,7 +176,7 @@ func parseArgs(msg string) (args []string, consumed int, err error) {
 	i := 0
 	for i = 1; len(args) < argCnt && i < len(msg); i++ {
 		b := msg[i]
-		if b == '*' {
+		if b == '*' && (msg[i+1] >= '0' && msg[i+1] <= '9') {
 			// crossing of multiple commands
 			return nil, 0, fmt.Errorf("bad RESP array: syntax error")
 		}
