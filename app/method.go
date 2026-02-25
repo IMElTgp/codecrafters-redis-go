@@ -963,8 +963,11 @@ func (c *Conn) runINFO(args []string) error {
 }
 
 func (c *Conn) runREPLCONF(args []string) error {
-	_, err := c.Conn.Write([]byte("*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n"))
-	return err
+	if len(args) == 2 {
+		_, err := c.Conn.Write([]byte("*3\r\n$8\r\nREPLCONF\r\n$3\r\nACK\r\n$1\r\n0\r\n"))
+		return err
+	}
+	return nil
 }
 
 func (c *Conn) runPSYNC(args []string) error {
