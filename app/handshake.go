@@ -59,7 +59,7 @@ func readFromMaster(c *Conn) error {
 	if err != nil {
 		return err
 	}
-	// After PSYNC, master sends: +FULLRESYNC ...\r\n then an RDB bulk string.
+	// After PSYNC, master sends: +FULLRESYNC ...\r\n then an RDB bulk string
 	if kind == '+' && strings.HasPrefix(line, "FULLRESYNC") {
 		return readRDBBulk(c.Conn)
 	}
@@ -76,15 +76,20 @@ func readFromMaster(c *Conn) error {
 }
 
 func readRESPLine(conn io.Reader) (kind byte, line string, err error) {
+	// read the RESP type byte (+, -, :, $, *) before reading the rest of the line
 	b, err := readByte(conn)
 	if err != nil {
 		return 0, "", err
 	}
+	// read the content of the RESP line
 	line, err = readLine(conn)
 	return b, line, err
 }
 
+// readRDBBulk is the special case reader for the RDB payload
 func readRDBBulk(conn io.Reader) error {
+	// read the $<len>\r\n header
+	// b is for $
 	b, err := readByte(conn)
 	if err != nil {
 		return err
@@ -92,6 +97,7 @@ func readRDBBulk(conn io.Reader) error {
 	if b != '$' {
 		return io.ErrUnexpectedEOF
 	}
+	// read the length of RDB payload
 	line, err := readLine(conn)
 	if err != nil {
 		return err
@@ -103,16 +109,19 @@ func readRDBBulk(conn io.Reader) error {
 	if n <= 0 {
 		return nil
 	}
-	// RDB bulk payload has no trailing \r\n in replication stream.
+	// discard the payload
+	// RDB bulk payload has no trailing \r\n in replication stream
 	return discardN(conn, n)
 }
 
+// readByte reads one single byte and return it
 func readByte(conn io.Reader) (byte, error) {
 	var buf [1]byte
 	_, err := io.ReadFull(conn, buf[:])
 	return buf[0], err
 }
 
+// readLine reads an entire line from conn and return this line
 func readLine(conn io.Reader) (string, error) {
 	var b strings.Builder
 	for {
@@ -129,10 +138,12 @@ func readLine(conn io.Reader) (string, error) {
 	return strings.TrimSuffix(line, "\r"), nil
 }
 
+// discardN is used to skip n bytes of conn
 func discardN(conn io.Reader, n int) error {
 	if n <= 0 {
 		return nil
 	}
+	// throw away (discard) n bytes from conn
 	_, err := io.CopyN(io.Discard, conn, int64(n))
 	return err
 }

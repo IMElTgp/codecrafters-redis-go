@@ -7,6 +7,9 @@ import (
 	"strings"
 )
 
+// offset represents current server's total processed bytes of commands
+var offset int
+
 type Conn struct {
 	Conn   net.Conn
 	silent bool
@@ -410,6 +413,9 @@ func handleConn(c *Conn) {
 			if !exec {
 				// if exec, consumed has been counted
 				totalConsumed += consumed
+				mu.Lock()
+				offset += consumed
+				mu.Unlock()
 			}
 		}
 
