@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io"
 	"strconv"
 	"strings"
@@ -56,68 +55,56 @@ func readFromMaster(c *Conn) error {
 	if serverRole {
 		return nil
 	}
-	kind, line, err := readRESPValue(c.Conn)
+	kind, line, err := readRESPLine(c.Conn)
 	if err != nil {
 		return err
 	}
 	// After PSYNC, master sends: +FULLRESYNC ...\r\n then an RDB bulk string.
 	if kind == '+' && strings.HasPrefix(line, "FULLRESYNC") {
-		_, _, err = readRESPValue(c.Conn)
+		return readRDBBulk(c.Conn)
+	}
+	if kind == '$' {
+		n, err := strconv.Atoi(line)
 		if err != nil {
 			return err
+		}
+		if n > 0 {
+			return discardN(c.Conn, n)
 		}
 	}
 	return nil
 }
 
-func readRESPValue(conn io.Reader) (kind byte, line string, err error) {
+func readRESPLine(conn io.Reader) (kind byte, line string, err error) {
 	b, err := readByte(conn)
 	if err != nil {
 		return 0, "", err
 	}
+	line, err = readLine(conn)
+	return b, line, err
+}
 
-	switch b {
-	case '+', '-', ':':
-		line, err = readLine(conn)
-		return b, line, err
-	case '$':
-		line, err = readLine(conn)
-		if err != nil {
-			return b, "", err
-		}
-		n, err := strconv.Atoi(line)
-		if err != nil {
-			return b, "", err
-		}
-		if n == -1 {
-			return b, "", nil
-		}
-		// bulk string payload + \r\n
-		if err := discardN(conn, n+2); err != nil {
-			return b, "", err
-		}
-		return b, "", nil
-	case '*':
-		line, err = readLine(conn)
-		if err != nil {
-			return b, "", err
-		}
-		n, err := strconv.Atoi(line)
-		if err != nil {
-			return b, "", err
-		}
-		if n <= 0 {
-			return b, "", nil
-		}
-		for i := 0; i < n; i++ {
-			if _, _, err = readRESPValue(conn); err != nil {
-				return b, "", err
-			}
-		}
-		return b, "", nil
-	default:
-		return b, "", fmt.Errorf("unexpected RESP type byte: %q", b)
+func readRDBBulk(conn io.Reader) error {
+	b, err := readByte(conn)
+	if err != nil {
+		return err
 	}
+	if b != '$' {
+		return io.ErrUnexpectedEOF
+	}
+	line, err := readLine(conn)
+	if err != nil {
+		return err
+	}
+	n, err := strconv.Atoi(line)
+	if err != nil {
+		return err
+	}
+	if n <= 0 {
+		return nil
+	}
+	// RDB bulk payload has no trailing \r\n in replication stream.
+	return discardN(conn, n)
 }
 
 func readByte(conn io.Reader) (byte, error) {
