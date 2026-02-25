@@ -97,16 +97,6 @@ func serialize(str string) string {
 	return "$" + strconv.Itoa(len(str)) + "\r\n" + str + "\r\n"
 }
 
-func (c *Conn) runPING() error {
-	_, err := c.Conn.Write([]byte("+PONG\r\n"))
-	if err != nil {
-		// handle error
-		return err
-	}
-
-	return nil
-}
-
 // cmpID is a simple tool function for comparing ID for binary searches
 func cmpID(id1, id2 string) int {
 	tm1, no1, err := splitID(id1)

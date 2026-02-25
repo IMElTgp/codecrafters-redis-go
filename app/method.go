@@ -10,6 +10,16 @@ import (
 	"time"
 )
 
+func (c *Conn) runPING() error {
+	_, err := c.write([]byte("+PONG\r\n"))
+	if err != nil {
+		// handle error
+		return err
+	}
+
+	return nil
+}
+
 func (c *Conn) runECHO(strs []string) error {
 	for _, str := range strs {
 		_, err := c.write([]byte(serialize(str)))
