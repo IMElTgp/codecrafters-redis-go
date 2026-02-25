@@ -8,16 +8,24 @@ import (
 )
 
 type Conn struct {
-	Conn net.Conn
+	Conn   net.Conn
+	silent bool
+}
+
+func (c *Conn) write(p []byte) (int, error) {
+	if c.silent {
+		return len(p), nil
+	}
+	return c.Conn.Write(p)
 }
 
 // all replica connections for propagation
 var replicaConns = make(map[net.Conn]bool)
 
 // working function which carries logics related to client serving
-func handleConn(conn net.Conn) {
+func handleConn(c *Conn) {
 	defer func() {
-		err := conn.Close()
+		err := c.Conn.Close()
 		if err != nil {
 			// handle error
 			return
@@ -25,7 +33,6 @@ func handleConn(conn net.Conn) {
 	}()
 
 	var buffer = make([]byte, 1024)
-	c := &Conn{conn}
 
 	// cross-command variables should be kept outside the for loop
 	// MULTI blocking
@@ -48,7 +55,7 @@ func handleConn(conn net.Conn) {
 
 	for {
 		// for multiple commands in a line, which I haven't seen in test cases
-		n, err := conn.Read(buffer)
+		n, err := c.Conn.Read(buffer)
 		if err != nil {
 			// handle error
 			if err == io.EOF {
@@ -98,7 +105,7 @@ func handleConn(conn net.Conn) {
 			if strings.ToUpper(args[0]) == "PSYNC" {
 				fromReplica = true
 				mu.Lock()
-				replicaConns[conn] = true
+				replicaConns[c.Conn] = true
 				mu.Unlock()
 			}
 
@@ -303,31 +310,39 @@ func handleConn(conn net.Conn) {
 			case "EXEC":
 				if !multi {
 					// haven't called MULTI
-					_, _ = c.Conn.Write([]byte("-ERR EXEC without MULTI\r\n"))
+					if serverRole {
+						_, _ = c.Conn.Write([]byte("-ERR EXEC without MULTI\r\n"))
+					}
 					return
 				}
 				multi = false
 				exec = true
 				// remember to update totalConsumed here or EXEC may be considered as a command inside cmdQueue
 				totalConsumed += consumed
-				_, err = c.Conn.Write([]byte("*" + strconv.Itoa(len(cmdQueue)) + "\r\n"))
-				if err != nil {
-					// handle error
-					return
+				if serverRole {
+					_, err = c.Conn.Write([]byte("*" + strconv.Itoa(len(cmdQueue)) + "\r\n"))
+					if err != nil {
+						// handle error
+						return
+					}
 				}
 			case "DISCARD":
 				if !multi {
 					// haven't called MULTI
-					_, _ = c.Conn.Write([]byte("-ERR DISCARD without MULTI\r\n"))
+					if serverRole {
+						_, _ = c.Conn.Write([]byte("-ERR DISCARD without MULTI\r\n"))
+					}
 					return
 				}
 				multi = false
 				// discard cmdQueue
 				cmdQueue = [][]string{}
-				_, err = c.Conn.Write([]byte("+OK\r\n"))
-				if err != nil {
-					// handle error
-					return
+				if serverRole {
+					_, err = c.Conn.Write([]byte("+OK\r\n"))
+					if err != nil {
+						// handle error
+						return
+					}
 				}
 			case "INFO":
 				if multi {

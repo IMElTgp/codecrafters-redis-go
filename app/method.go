@@ -12,7 +12,7 @@ import (
 
 func (c *Conn) runECHO(strs []string) error {
 	for _, str := range strs {
-		_, err := c.Conn.Write([]byte(serialize(str)))
+		_, err := c.write([]byte(serialize(str)))
 		if err != nil {
 			// handle error
 			return err
@@ -57,13 +57,10 @@ func (c *Conn) runSET(args []string) error {
 	variables.Store(args[0], val)
 	mu.Unlock()
 
-	// replica shall not write a reply; same for the following write commands
-	if serverRole {
-		_, err = c.Conn.Write([]byte("+OK\r\n"))
-		if err != nil {
-			// handle error
-			return err
-		}
+	_, err = c.write([]byte("+OK\r\n"))
+	if err != nil {
+		// handle error
+		return err
 	}
 
 	return nil
@@ -78,7 +75,7 @@ func (c *Conn) runGET(args []string) error {
 	v, ok := variables.Load(args[0])
 	mu.Unlock()
 	if !ok {
-		_, err := c.Conn.Write([]byte("$-1\r\n"))
+		_, err := c.write([]byte("$-1\r\n"))
 		if err != nil {
 			// handle error
 			return err
@@ -95,14 +92,14 @@ func (c *Conn) runGET(args []string) error {
 		mu.Lock()
 		variables.Delete(args[0])
 		mu.Unlock()
-		_, err := c.Conn.Write([]byte("$-1\r\n"))
+		_, err := c.write([]byte("$-1\r\n"))
 		if err != nil {
 			// handle error
 			return err
 		}
 		return nil
 	}
-	_, err := c.Conn.Write([]byte(serialize(val.Val)))
+	_, err := c.write([]byte(serialize(val.Val)))
 	if err != nil {
 		// handle error
 		return err
@@ -145,12 +142,10 @@ func (c *Conn) runRPUSH(args []string) error {
 		}
 	}
 
-	if serverRole {
-		_, err = c.Conn.Write([]byte(":" + strconv.Itoa(listLen) + "\r\n"))
-		if err != nil {
-			// handle error
-			return err
-		}
+	_, err = c.write([]byte(":" + strconv.Itoa(listLen) + "\r\n"))
+	if err != nil {
+		// handle error
+		return err
 	}
 
 	return nil
@@ -186,12 +181,10 @@ func (c *Conn) runLPUSH(args []string) error {
 		}
 	}
 
-	if serverRole {
-		_, err = c.Conn.Write([]byte(":" + strconv.Itoa(listLen) + "\r\n"))
-		if err != nil {
-			// handle error
-			return err
-		}
+	_, err = c.write([]byte(":" + strconv.Itoa(listLen) + "\r\n"))
+	if err != nil {
+		// handle error
+		return err
 	}
 
 	return nil
@@ -253,18 +246,18 @@ func (c *Conn) runLRANGE(args []string) error {
 
 	// corner cases
 	if lBoarder >= ln {
-		_, err = c.Conn.Write([]byte("*0\r\n"))
+		_, err = c.write([]byte("*0\r\n"))
 		return fmt.Errorf("LRANGE: out of range")
 	}
 	rBoarder = int(math.Min(float64(rBoarder), float64(ln-1)))
 
-	_, err = c.Conn.Write([]byte("*" + strconv.Itoa(rBoarder-lBoarder+1) + "\r\n"))
+	_, err = c.write([]byte("*" + strconv.Itoa(rBoarder-lBoarder+1) + "\r\n"))
 	if err != nil {
 		// handle error
 		return err
 	}
 	for _, elem := range cp[lBoarder : rBoarder+1] {
-		_, err = c.Conn.Write([]byte(serialize(elem.(string))))
+		_, err = c.write([]byte(serialize(elem.(string))))
 		if err != nil {
 			// handle error
 			return err
@@ -284,7 +277,7 @@ func (c *Conn) runLLEN(args []string) error {
 
 	if !ok {
 		mu.Unlock()
-		_, err := c.Conn.Write([]byte(":0\r\n"))
+		_, err := c.write([]byte(":0\r\n"))
 		return err
 	}
 
@@ -297,7 +290,7 @@ func (c *Conn) runLLEN(args []string) error {
 	ln := len(l)
 	mu.Unlock()
 
-	_, err := c.Conn.Write([]byte(":" + strconv.Itoa(ln) + "\r\n"))
+	_, err := c.write([]byte(":" + strconv.Itoa(ln) + "\r\n"))
 	return err
 }
 
@@ -308,7 +301,7 @@ func (c *Conn) runLPOP(args []string) error {
 	// if doesn't exist or empty, return null string
 	if !ok {
 		mu.Unlock()
-		_, err := c.Conn.Write([]byte("$-1\r\n"))
+		_, err := c.write([]byte("$-1\r\n"))
 		return err
 	}
 
@@ -319,7 +312,7 @@ func (c *Conn) runLPOP(args []string) error {
 	}
 	if len(l) == 0 {
 		mu.Unlock()
-		_, err := c.Conn.Write([]byte("$-1\r\n"))
+		_, err := c.write([]byte("$-1\r\n"))
 		return err
 	}
 	// make a copy
@@ -347,7 +340,7 @@ func (c *Conn) runLPOP(args []string) error {
 	var popped []string
 
 	for i := 0; i < toPop; i++ {
-		//_, err = c.Conn.Write([]byte(serialize(cp[0].(string))))
+		//_, err = c.write([]byte(serialize(cp[0].(string))))
 		//if err != nil {
 		// handle error
 		//	return err
@@ -368,20 +361,18 @@ func (c *Conn) runLPOP(args []string) error {
 	}
 	// if len(args) > 1 we need to write array instead of bulk string
 	if len(args) > 1 {
-		_, err = c.Conn.Write([]byte("*" + strconv.Itoa(toPop) + "\r\n"))
+		_, err = c.write([]byte("*" + strconv.Itoa(toPop) + "\r\n"))
 		if err != nil {
 			// handle error
 			return err
 		}
 	}
 
-	if serverRole {
-		for _, p := range popped {
-			_, err = c.Conn.Write([]byte(serialize(p)))
-			if err != nil {
-				// handle error
-				return err
-			}
+	for _, p := range popped {
+		_, err = c.write([]byte(serialize(p)))
+		if err != nil {
+			// handle error
+			return err
 		}
 	}
 
@@ -428,15 +419,13 @@ retryOnEmpty:
 			default:
 			}
 		}
-		if serverRole {
-			_, err = c.Conn.Write([]byte("*2\r\n"))
-			if err != nil {
-				// handle error
-				return err
-			}
-			_, err = c.Conn.Write([]byte(serialize(args[0]) + serialize(toPop)))
+		_, err = c.write([]byte("*2\r\n"))
+		if err != nil {
+			// handle error
 			return err
 		}
+		_, err = c.write([]byte(serialize(args[0]) + serialize(toPop)))
+		return err
 	}
 	mu.Unlock()
 
@@ -468,27 +457,23 @@ retryOnEmpty:
 			default:
 			}
 		}
-		if serverRole {
-			// encode the RESP array
-			_, err = c.Conn.Write([]byte("*2\r\n"))
-			if err != nil {
-				// handle error
-				return err
-			}
-			_, err = c.Conn.Write([]byte(serialize(args[0]) + serialize(toPop.(string))))
-			if err != nil {
-				// handle error
-				return err
-			}
+		// encode the RESP array
+		_, err = c.write([]byte("*2\r\n"))
+		if err != nil {
+			// handle error
+			return err
+		}
+		_, err = c.write([]byte(serialize(args[0]) + serialize(toPop.(string))))
+		if err != nil {
+			// handle error
+			return err
 		}
 	case <-time.After(time.Duration(1000*timeout) * time.Millisecond):
 		// timeout, return null array
-		if serverRole {
-			_, err = c.Conn.Write([]byte("*-1\r\n"))
-			if err != nil {
-				// handle error
-				return err
-			}
+		_, err = c.write([]byte("*-1\r\n"))
+		if err != nil {
+			// handle error
+			return err
 		}
 	}
 
@@ -506,7 +491,7 @@ func (c *Conn) runTYPE(args []string) error {
 	_, ok := variables.Load(args[0])
 	if ok {
 		mu.Unlock()
-		_, err := c.Conn.Write([]byte("+string\r\n"))
+		_, err := c.write([]byte("+string\r\n"))
 		return err
 	}
 
@@ -514,13 +499,13 @@ func (c *Conn) runTYPE(args []string) error {
 	_, ok = streams.Load(args[0])
 	if ok {
 		mu.Unlock()
-		_, err := c.Conn.Write([]byte("+stream\r\n"))
+		_, err := c.write([]byte("+stream\r\n"))
 		return err
 	}
 
 	mu.Unlock()
 	// doesn't exist
-	_, err := c.Conn.Write([]byte("+none\r\n"))
+	_, err := c.write([]byte("+none\r\n"))
 
 	return err
 }
@@ -564,7 +549,7 @@ func (c *Conn) runXADD(args []string) error {
 	/*if checkID(args[1], topElem) == TIME_NO_MISMATCH {
 		// invalid ID
 		mu.Unlock()
-		_, err := c.Conn.Write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"))
+		_, err := c.write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"))
 		return err
 	}*/
 	tm, no, err := splitID(args[1])
@@ -579,16 +564,12 @@ func (c *Conn) runXADD(args []string) error {
 	switch checkID(args[1], topElem) {
 	case TIME_NO_MISMATCH:
 		mu.Unlock()
-		if serverRole {
-			_, err := c.Conn.Write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"))
-			return err
-		}
+		_, err := c.write([]byte("-ERR The ID specified in XADD is equal or smaller than the target stream top item\r\n"))
+		return err
 	case INVALID_NO:
 		mu.Unlock()
-		if serverRole {
-			_, err := c.Conn.Write([]byte("-ERR The ID specified in XADD must be greater than 0-0\r\n"))
-			return err
-		}
+		_, err := c.write([]byte("-ERR The ID specified in XADD must be greater than 0-0\r\n"))
+		return err
 	case UNKNOWN_ERROR:
 		mu.Unlock()
 		return fmt.Errorf("XADD: Unknown errors happened")
@@ -671,12 +652,8 @@ func (c *Conn) runXADD(args []string) error {
 	notifyXREAD.Store(args[0], waiters)
 	mu.Unlock()
 	// write back the entry id
-	if serverRole {
-		_, err = c.Conn.Write([]byte(serialize(id)))
-		return err
-	}
-
-	return nil
+	_, err = c.write([]byte(serialize(id)))
+	return err
 }
 
 func (c *Conn) runXRANGE(args []string) error {
@@ -722,25 +699,25 @@ func (c *Conn) runXRANGE(args []string) error {
 	sliceLen := len(slice)
 	mu.Unlock()
 	// encode a RESP array
-	_, err := c.Conn.Write([]byte("*" + strconv.Itoa(sliceLen) + "\r\n"))
+	_, err := c.write([]byte("*" + strconv.Itoa(sliceLen) + "\r\n"))
 	if err != nil {
 		// handle error
 		return err
 	}
 	// traverse all entries to write
 	for _, e := range slice {
-		_, err = c.Conn.Write([]byte("*2\r\n" + serialize(e.id)))
+		_, err = c.write([]byte("*2\r\n" + serialize(e.id)))
 		if err != nil {
 			// handle error
 			return err
 		}
-		_, err = c.Conn.Write([]byte("*" + strconv.Itoa(2*len(e.kv)) + "\r\n"))
+		_, err = c.write([]byte("*" + strconv.Itoa(2*len(e.kv)) + "\r\n"))
 		if err != nil {
 			// handle error
 			return err
 		}
 		for _, kv := range e.kv {
-			_, err = c.Conn.Write([]byte(serialize(kv.key) + serialize(kv.value)))
+			_, err = c.write([]byte(serialize(kv.key) + serialize(kv.value)))
 			if err != nil {
 				// handle error
 				return err
@@ -786,7 +763,7 @@ func (c *Conn) runXREAD(args []string) error {
 	if !block {
 		// DO NOT ADD THIS PREFIX UNTIL WE KNOW WHETHER THE RESPONSE STRING SHOULD BE NULL
 		// or null array will be arrayed ([*-1\r\n])
-		_, err = c.Conn.Write([]byte("*" + strconv.Itoa(len(queries)) + "\r\n"))
+		_, err = c.write([]byte("*" + strconv.Itoa(len(queries)) + "\r\n"))
 		if err != nil {
 			// handle error
 			return err
@@ -858,14 +835,14 @@ func (c *Conn) runXREAD(args []string) error {
 				goto normal
 			case <-time.After(time.Duration(blockTimeout) * time.Millisecond):
 				// timeout, return a null array
-				_, err = c.Conn.Write([]byte("*-1\r\n"))
+				_, err = c.write([]byte("*-1\r\n"))
 				return err
 			}
 		}
 	normal:
 		if block {
 			// if we are sure we wouldn't return null array, add the prefix
-			_, err = c.Conn.Write([]byte("*" + strconv.Itoa(len(queries)) + "\r\n"))
+			_, err = c.write([]byte("*" + strconv.Itoa(len(queries)) + "\r\n"))
 			if err != nil {
 				// handle error
 				return err
@@ -877,19 +854,19 @@ func (c *Conn) runXREAD(args []string) error {
 
 		// encode a RESP response
 		// 0. prefix
-		_, err = c.Conn.Write([]byte("*2\r\n"))
+		_, err = c.write([]byte("*2\r\n"))
 		if err != nil {
 			// handle error
 			return err
 		}
 		// 1. the stream key, as a bulk string
-		_, err = c.Conn.Write([]byte(serialize(q[0])))
+		_, err = c.write([]byte(serialize(q[0])))
 		if err != nil {
 			// handle error
 			return err
 		}
 		// 2. length of slice (entries to be written)
-		_, err = c.Conn.Write([]byte("*" + strconv.Itoa(len(slice)) + "\r\n"))
+		_, err = c.write([]byte("*" + strconv.Itoa(len(slice)) + "\r\n"))
 		if err != nil {
 			// handle error
 			return err
@@ -906,7 +883,7 @@ func (c *Conn) runXREAD(args []string) error {
 				resp += serialize(kv.key) + serialize(kv.value)
 			}
 
-			_, err = c.Conn.Write([]byte(resp))
+			_, err = c.write([]byte(resp))
 			if err != nil {
 				// handle error
 				return err
@@ -943,10 +920,8 @@ func (c *Conn) runINCR(args []string) error {
 		// key exists but doesn't have a numeric value
 		// return an error
 		mu.Unlock()
-		if serverRole {
-			_, err = c.Conn.Write([]byte("-ERR value is not an integer or out of range\r\n"))
-			return err
-		}
+		_, err = c.write([]byte("-ERR value is not an integer or out of range\r\n"))
+		return err
 	}
 
 	variables.Store(args[0], Value{strconv.Itoa(valNum + 1), val.Ex})
@@ -954,7 +929,7 @@ func (c *Conn) runINCR(args []string) error {
 	mu.Unlock()
 
 	// write
-	_, err = c.Conn.Write([]byte(":" + strconv.Itoa(valNum+1) + "\r\n"))
+	_, err = c.write([]byte(":" + strconv.Itoa(valNum+1) + "\r\n"))
 	if err != nil {
 		// handle error
 		return err
@@ -968,7 +943,7 @@ func (c *Conn) runMULTI(args []string) error {
 		return fmt.Errorf("MULTI: this command does not support additional arguments")
 	}
 
-	_, err := c.Conn.Write([]byte("+OK\r\n"))
+	_, err := c.write([]byte("+OK\r\n"))
 	return err
 }
 
@@ -983,17 +958,17 @@ func (c *Conn) runINFO(args []string) error {
 		role = "slave"
 	}
 
-	_, err := c.Conn.Write([]byte(serialize("role:" + role + "master_replid:8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb" + "master_repl_offset:0")))
+	_, err := c.write([]byte(serialize("role:" + role + "master_replid:8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb" + "master_repl_offset:0")))
 	return err
 }
 
 func (c *Conn) runREPLCONF(args []string) error {
-	_, err := c.Conn.Write([]byte("+OK\r\n"))
+	_, err := c.write([]byte("+OK\r\n"))
 	return err
 }
 
 func (c *Conn) runPSYNC(args []string) error {
-	_, err := c.Conn.Write([]byte("+FULLRESYNC 8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb 0\r\n"))
+	_, err := c.write([]byte("+FULLRESYNC 8371b4fb1155b71f4a04d3e1bc3e18c4a990aeeb 0\r\n"))
 	if err != nil {
 		// handle error
 		return err
@@ -1008,14 +983,14 @@ func (c *Conn) runPSYNC(args []string) error {
 		return err
 	}
 	// RDB file doesn't have trailing \r\n, which is different from common bulk strings
-	_, err = c.Conn.Write([]byte(strings.TrimRight(serialize(string(data)), "\r\n")))
+	_, err = c.write([]byte(strings.TrimRight(serialize(string(data)), "\r\n")))
 
 	return err
 }
 
 func (c *Conn) processMULTI(q [][]string, args []string) ([][]string, error) {
 	q = append(q, args)
-	_, err := c.Conn.Write([]byte("+QUEUED\r\n"))
+	_, err := c.write([]byte("+QUEUED\r\n"))
 	if err != nil {
 		// handle error
 		return nil, err

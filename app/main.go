@@ -27,23 +27,30 @@ func main() {
 
 	// replica
 	if !serverRole {
-		conn, err := net.Dial("tcp", config.host+":"+config.port)
+		masterConn, err := net.Dial("tcp", config.host+":"+config.port)
 		if err != nil {
 			// handle error
 			return
 		}
 
+		c := &Conn{masterConn, false}
+
 		// handshake from replica
 		// master handles them in handleConn(l.Accept()) later
-		_ = sendPING(config.host, config.port, conn)
+		_ = sendPING(config.host, config.port, c)
 		// read from master to avoid continuous writing
-		_ = readFromMaster(conn)
-		_ = sendREPLCONF1(strconv.Itoa(port), conn)
-		_ = readFromMaster(conn)
-		_ = sendREPLCONF2(conn)
-		_ = readFromMaster(conn)
-		_ = sendPSYNC(conn)
-		_ = readFromMaster(conn)
+		_ = readFromMaster(c)
+		_ = sendREPLCONF1(strconv.Itoa(port), c)
+		_ = readFromMaster(c)
+		_ = sendREPLCONF2(c)
+		_ = readFromMaster(c)
+		_ = sendPSYNC(c)
+		_ = readFromMaster(c)
+
+		// set c.silent = true after handshake
+		c.silent = true
+
+		go handleConn(c)
 	}
 
 	address := "0.0.0.0:" + strconv.Itoa(port)
@@ -71,6 +78,6 @@ func main() {
 
 		// use goroutines to process multiple clients
 		// redis uses event loop
-		go handleConn(conn)
+		go handleConn(&Conn{conn, false})
 	}
 }
