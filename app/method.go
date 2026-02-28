@@ -1027,8 +1027,9 @@ func (c *Conn) runWAIT(args []string) error {
 		// usage: WAIT <numreplicas> <timeout>
 		return fmt.Errorf("WAIT: argument count mismatch")
 	}
-	// for simplest case: no replica
-	_, err := c.write([]byte(":0\r\n"))
+	// for simplest case: no replica -> :0\r\n
+	// if all replicas just connected (no write commands) -> :<count of replicas>\r\n
+	_, err := c.write([]byte(":" + strconv.Itoa(len(replicaConns)) + "\r\n"))
 
 	return err
 }
