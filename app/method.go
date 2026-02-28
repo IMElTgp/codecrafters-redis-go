@@ -1017,3 +1017,18 @@ func (c *Conn) processMULTI(q [][]string, args []string) ([][]string, error) {
 	}
 	return q, nil
 }
+
+func (c *Conn) runWAIT(args []string) error {
+	// master-only so far
+	if !serverRole {
+		return nil
+	}
+	if len(args) != 2 {
+		// usage: WAIT <numreplicas> <timeout>
+		return fmt.Errorf("WAIT: argument count mismatch")
+	}
+	// for simplest case: no replica
+	_, err := c.write([]byte(":0\r\n"))
+
+	return err
+}
