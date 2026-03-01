@@ -1061,9 +1061,10 @@ func (c *Conn) runWAIT(args []string) error {
 			return err
 		}
 	}
-
+	// deadline of waiting, after which the `WAIT` should be terminated
 	deadline := time.Now().Add(time.Duration(timeout) * time.Millisecond)
-
+	// a timer which is set to broadcast in case the for waiting loop won't be woken up
+	// forcing the goroutine to judge whether to quit sleeping
 	timer := time.AfterFunc(time.Duration(timeout)*time.Millisecond, func() {
 		mu.Lock()
 		cond.Broadcast()
@@ -1073,10 +1074,16 @@ func (c *Conn) runWAIT(args []string) error {
 
 	mu.Lock()
 	for countAcked(int64(target)) < numreplicas {
+		// we still need an inside waking up checker to quit the loop
 		if time.Now().After(deadline) {
 			break
 		}
 		// count unmet
+		// there is a hidden race condition:
+		// if we put the wakeup condition inside the loop condition like
+		// for countAcked(int64(target)) < numreplicas && time.Now().After(deadline)
+		// we expect this loop to break. But, if rightly after that, cond.Wait() is executed, the goroutine will fall asleep with no one waking it up
+		// so we need a broadcaster, and that's why we need time.AfterFunc
 		cond.Wait()
 	}
 	rep := countAcked(int64(target))
