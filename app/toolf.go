@@ -232,12 +232,14 @@ func parseCLIArgs(args []string) (int, Config) {
 	dbfilenamePtr := flag.String("dbfilename", "", "the name of the RDB file")
 	flag.Parse()
 
+	// assign early to avoid quitting without assigning
 	mu.Lock()
 	dir = *dirPtr
 	dbfilename = *dbfilenamePtr
 	mu.Unlock()
 
 	hostAndPort := strings.Split(*replicaof, " ")
+	// this may happen after assignment to dir and dbfilename
 	if len(hostAndPort) == 1 {
 		return *port, Config{}
 	}
