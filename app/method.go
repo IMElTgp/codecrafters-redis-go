@@ -1043,8 +1043,6 @@ func (c *Conn) runWAIT(args []string) error {
 		return err
 	}
 
-	c.silent = true
-
 	// send REPLCONF GETACK * once
 	// act as a barrier probe
 	// replicas shall not reply until they finished all previous write commands
@@ -1064,18 +1062,25 @@ func (c *Conn) runWAIT(args []string) error {
 		}
 	}
 
-	// compute deadline
-	ddl := time.Now().Add(time.Duration(timeout) * time.Millisecond)
+	deadline := time.Now().Add(time.Duration(timeout) * time.Millisecond)
+
+	timer := time.AfterFunc(time.Duration(timeout)*time.Millisecond, func() {
+		mu.Lock()
+		cond.Broadcast()
+		mu.Unlock()
+	})
+	defer timer.Stop()
 
 	mu.Lock()
-	for countAcked(int64(target)) < numreplicas && !time.Now().After(ddl) {
+	for countAcked(int64(target)) < numreplicas {
+		if time.Now().After(deadline) {
+			break
+		}
 		// count unmet
 		cond.Wait()
 	}
 	rep := countAcked(int64(target))
 	mu.Unlock()
-
-	c.silent = false
 
 	_, err = c.Conn.Write([]byte(":" + strconv.Itoa(rep) + "\r\n"))
 
