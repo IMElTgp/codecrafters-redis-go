@@ -1093,3 +1093,14 @@ func (c *Conn) runWAIT(args []string) error {
 
 	return err
 }
+
+func (c *Conn) runCONFIG(args []string) error {
+	// support CONFIG GET dir
+	if len(args) != 2 {
+		return fmt.Errorf("CONFIG: argument count mismatch")
+	}
+
+	// return a hard-coded RESP array
+	_, err := c.write([]byte("*2\r\n" + serialize("dir") + serialize("/tmp/redis-data")))
+	return err
+}
