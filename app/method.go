@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math"
+	"net"
 	"sort"
 	"strconv"
 	"strings"
@@ -976,7 +977,7 @@ func (c *Conn) runREPLCONF(args []string) error {
 	if len(args) == 2 && args[1] == "*" && strings.ToUpper(args[0]) == "GETACK" {
 		rep := "*3\r\n" + serialize("REPLCONF") + serialize("ACK")
 		mu.Lock()
-		rep += serialize(strconv.Itoa(offset))
+		rep += serialize(strconv.FormatInt(offset, 10))
 		mu.Unlock()
 
 		_, err := c.Conn.Write([]byte(rep))
@@ -1027,9 +1028,52 @@ func (c *Conn) runWAIT(args []string) error {
 		// usage: WAIT <numreplicas> <timeout>
 		return fmt.Errorf("WAIT: argument count mismatch")
 	}
-	// for simplest case: no replica -> :0\r\n
-	// if all replicas just connected (no write commands) -> :<count of replicas>\r\n
-	_, err := c.write([]byte(":" + strconv.Itoa(len(replicaConns)) + "\r\n"))
+	// for simplest case: no replica -> :0\r\n -> stage 1
+	// if all replicas just connected (no write commands) -> :<count of replicas>\r\n -> stage 2
+	// _, err := c.write([]byte(":" + strconv.Itoa(len(replicaConns)) + "\r\n"))
+
+	timeout, err := strconv.Atoi(args[1])
+	if err != nil {
+		// handle error
+		return err
+	}
+	numreplicas, err := strconv.Atoi(args[0])
+	if err != nil {
+		// handle error
+		return err
+	}
+
+	// send REPLCONF GETACK * once
+	// act as a barrier probe
+	// replicas shall not reply until they finished all previous write commands
+	mu.Lock()
+	// make a copy of global variable to use outside locked area
+	target := masterOffset
+	repConns := []net.Conn{}
+	for repConn := range replicaConns {
+		repConns = append(repConns, repConn)
+	}
+	mu.Unlock()
+	for _, repConn := range repConns {
+		_, err = repConn.Write([]byte("*3\r\n" + serialize("REPLCONF") + serialize("GETACK") + serialize("*")))
+		if err != nil {
+			// handle error
+			return err
+		}
+	}
+
+	// compute deadline
+	ddl := time.Now().Add(time.Duration(timeout) * time.Millisecond)
+
+	mu.Lock()
+	for countAcked(int64(target)) < numreplicas && !time.Now().After(ddl) {
+		// count unmet
+		cond.Wait()
+	}
+	rep := countAcked(int64(target))
+	mu.Unlock()
+
+	_, err = c.Conn.Write([]byte(":" + strconv.Itoa(rep) + "\r\n"))
 
 	return err
 }

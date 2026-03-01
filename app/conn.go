@@ -5,10 +5,20 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 // offset represents current server's total processed bytes of commands
-var offset int
+var offset int64
+
+// replicaOffset records net.Conn (replica connection) <-> offset map
+var replicaOffset = make(map[net.Conn]int64)
+
+// masterOffset maintains the total bytes of write commands master has propagated to replicas
+var masterOffset int
+
+// cond is for notifying `WAIT` command
+var cond = sync.NewCond(&mu)
 
 type Conn struct {
 	Conn   net.Conn
@@ -109,6 +119,23 @@ func handleConn(c *Conn) {
 				fromReplica = true
 				mu.Lock()
 				replicaConns[c.Conn] = true
+				mu.Unlock()
+			}
+
+			// judge if the arguments contain offset and parse it
+			if len(args) == 3 && strings.EqualFold(args[0], "REPLCONF") && strings.EqualFold(args[1], "ACK") {
+				offsetFromRep, err := strconv.ParseInt(args[2], 10, 64)
+				if err != nil {
+					// handle error
+					return
+				}
+				mu.Lock()
+				// replicaOffset[c.Conn] = max(offsetFromRep, replicaOffset[c.Conn])
+				if offsetFromRep > replicaOffset[c.Conn] {
+					replicaOffset[c.Conn] = offsetFromRep
+					// signal all waiting goroutines (master)
+					cond.Broadcast()
+				}
 				mu.Unlock()
 			}
 
@@ -406,11 +433,14 @@ func handleConn(c *Conn) {
 
 				// encode these arguments into a RESP array
 				propagation := "*" + strconv.Itoa(len(args)) + "\r\n"
+
+				mu.Lock()
+				// for one propagation procedure, update masterOffset
 				for _, arg := range args {
 					propagation += serialize(arg)
 				}
+				masterOffset += len(propagation)
 				// iterate all replica connections
-				mu.Lock()
 				for repConn := range replicaConns {
 					_, err = repConn.Write([]byte(propagation))
 					if err != nil {
@@ -426,7 +456,7 @@ func handleConn(c *Conn) {
 				// if exec, consumed has been counted
 				totalConsumed += consumed
 				mu.Lock()
-				offset += consumed
+				offset += int64(consumed)
 				mu.Unlock()
 			}
 		}

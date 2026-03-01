@@ -200,6 +200,18 @@ func parseArgs(msg string) (args []string, consumed int, err error) {
 	return
 }
 
+// countAcked returns count of replicas that meet the demand of `WAIT`
+func countAcked(target int64) (count int) {
+	mu.Lock()
+	for repConn := range replicaConns {
+		if replicaOffset[repConn] >= target {
+			count++
+		}
+	}
+	mu.Unlock()
+	return
+}
+
 // parse CLI arguments
 func parseCLIArgs(args []string) (int, Config) {
 	defaultValue := ""
