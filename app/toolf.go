@@ -66,6 +66,12 @@ var notifyXREAD sync.Map // Map[string]chan struct{}
 // default: true
 var serverRole = true
 
+// dir is the path to the directory where the RDB file is stored
+var dir string
+
+// dbfilename is the name of the RDB file
+var dbfilename string
+
 // tool function for getting list copy from Map
 func getCopy(key string) ([]any, error) {
 	list, ok := lists.Load(key)
@@ -222,6 +228,8 @@ func parseCLIArgs(args []string) (int, Config) {
 
 	port := flag.Int("port", 6379, "server port")
 	replicaof := flag.String("replicaof", defaultValue, "replication of this server")
+	dirPtr := flag.String("dir", "", "the path to the directory where the RDB file is stored")
+	dbfilenamePtr := flag.String("dbfilename", "", "the name of the RDB file")
 	flag.Parse()
 
 	hostAndPort := strings.Split(*replicaof, " ")
@@ -229,6 +237,11 @@ func parseCLIArgs(args []string) (int, Config) {
 		return *port, Config{}
 	}
 	masHost, masPort := hostAndPort[0], hostAndPort[1]
+
+	mu.Lock()
+	dir = *dirPtr
+	dbfilename = *dbfilenamePtr
+	mu.Unlock()
 
 	return *port, Config{masHost, masPort}
 }
