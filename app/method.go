@@ -1043,6 +1043,8 @@ func (c *Conn) runWAIT(args []string) error {
 		return err
 	}
 
+	c.silent = true
+
 	// send REPLCONF GETACK * once
 	// act as a barrier probe
 	// replicas shall not reply until they finished all previous write commands
@@ -1072,6 +1074,8 @@ func (c *Conn) runWAIT(args []string) error {
 	}
 	rep := countAcked(int64(target))
 	mu.Unlock()
+
+	c.silent = false
 
 	_, err = c.Conn.Write([]byte(":" + strconv.Itoa(rep) + "\r\n"))
 
