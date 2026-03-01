@@ -232,16 +232,16 @@ func parseCLIArgs(args []string) (int, Config) {
 	dbfilenamePtr := flag.String("dbfilename", "", "the name of the RDB file")
 	flag.Parse()
 
+	mu.Lock()
+	dir = *dirPtr
+	dbfilename = *dbfilenamePtr
+	mu.Unlock()
+
 	hostAndPort := strings.Split(*replicaof, " ")
 	if len(hostAndPort) == 1 {
 		return *port, Config{}
 	}
 	masHost, masPort := hostAndPort[0], hostAndPort[1]
-
-	mu.Lock()
-	dir = *dirPtr
-	dbfilename = *dbfilenamePtr
-	mu.Unlock()
 
 	return *port, Config{masHost, masPort}
 }
