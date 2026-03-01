@@ -424,6 +424,18 @@ func handleConn(c *Conn) {
 				if c.runWAIT(args[1:]) != nil {
 					return
 				}
+			case "CONFIG":
+				if multi {
+					cmdQueue, err = c.processMULTI(cmdQueue, args)
+					if err != nil {
+						// handle error
+						return
+					}
+					goto skip
+				}
+				if c.runCONFIG(args[1:]) != nil {
+					return
+				}
 			}
 			// do propagation
 			// this should NOT be put inside `skip` label
