@@ -138,7 +138,7 @@ func handleConn(c *Conn) {
 				}
 				mu.Unlock()
 				// avoid processing this ACK twice
-				continue
+				goto skip
 			}
 
 			switch strings.ToUpper(args[0]) {
