@@ -487,7 +487,6 @@ func parseRDBFile() error {
 			_, _ = kvSize, expSize
 		case 0xfc:
 			// not implemented
-			return nil
 		case 0xfd:
 			// expire time
 			sec, err = readUint32LE(r)
