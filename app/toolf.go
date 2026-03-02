@@ -479,7 +479,7 @@ func parseRDBFile() error {
 				// handle error
 				return err
 			}
-			expSize, err := readString(r)
+			expSize, err := readSize(r)
 			if err != nil {
 				// handle error
 				return err
