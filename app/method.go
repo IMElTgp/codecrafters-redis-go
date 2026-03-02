@@ -1123,7 +1123,7 @@ func (c *Conn) runKEYS(args []string) error {
 	mu.Lock()
 	variables.Range(func(key, value any) bool {
 		k := key.(string)
-		_ = value.(string)
+		_ = value.(Value)
 		keyList = append(keyList, k)
 		return true
 	})
