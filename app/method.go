@@ -1113,10 +1113,10 @@ func (c *Conn) runCONFIG(args []string) error {
 }
 
 func (c *Conn) runKEYS(args []string) error {
-	if len(args) != 2 {
+	/*if len(args) != 2 {
 		// usage: KEYS "<key name>"
 		return fmt.Errorf("KEYS: argument count mismatch")
-	}
+	}*/
 
 	// for this stage, only consider KEYS *
 	keyList := make([]string, 0)
