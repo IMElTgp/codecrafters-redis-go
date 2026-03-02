@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -420,7 +421,7 @@ func readUint32LE(r *bufio.Reader) (uint32, error) {
 }
 
 func parseRDBFile() error {
-	f, err := os.Open(dbfilename)
+	f, err := os.Open(filepath.Join(dir, dbfilename))
 	if err != nil {
 		// handle error
 		return err
