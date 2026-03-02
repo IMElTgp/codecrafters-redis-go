@@ -510,7 +510,8 @@ func parseRDBFile() error {
 			if sec == 0 {
 				sec = math.MaxInt32
 			}
-			variables.Store(key, Value{val, time.Now().Add(time.Duration(sec))})
+			t := time.Unix(int64(sec), 0)
+			variables.Store(key, Value{val, t})
 			mu.Unlock()
 		case 0xff:
 			// not implemented
