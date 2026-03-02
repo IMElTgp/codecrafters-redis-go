@@ -25,6 +25,10 @@ func main() {
 		serverRole = true
 	}
 
+	if parseRDBFile() != nil {
+		return
+	}
+
 	// replica
 	if !serverRole {
 		masterConn, err := net.Dial("tcp", config.host+":"+config.port)

@@ -1,8 +1,12 @@
 package main
 
 import (
+	"bufio"
+	"encoding/binary"
 	"flag"
 	"fmt"
+	"io"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -324,4 +328,192 @@ func checkID(id string, topElem Entry) int {
 		return SUCCESS
 	}
 	return TIME_NO_MISMATCH
+}
+
+// readString reads RDB file data
+func readString(r *bufio.Reader) (string, error) {
+	// read one byte
+	b, err := r.ReadByte()
+	if err != nil {
+		// handle error
+		return "", err
+	}
+	if b>>6 != 3 {
+		// first 2 bits are not 11
+		// normal length encoding
+		var buf = make([]byte, int(b))
+		if _, err = io.ReadFull(r, buf); err != nil {
+			return "", err
+		}
+		return string(buf), nil
+	}
+	// inspect b & 0x3F (lower 6 bits)
+	switch b & 0x3F {
+	case 0:
+		// read int8
+		i8, err := r.ReadByte()
+		if err != nil {
+			// handle error
+			return "", err
+		}
+		return strconv.FormatInt(int64(int8(i8)), 10), nil
+	case 1:
+		// read int16
+		var buf [2]byte
+		if _, err = io.ReadFull(r, buf[:]); err != nil {
+			return "", err
+		}
+		v := int16(binary.LittleEndian.Uint16(buf[:]))
+		return strconv.FormatInt(int64(v), 10), nil
+	case 2:
+		// read int32
+		var buf [4]byte
+		if _, err = io.ReadFull(r, buf[:]); err != nil {
+			return "", err
+		}
+		v := int(binary.LittleEndian.Uint32(buf[:]))
+		return strconv.FormatInt(int64(v), 10), nil
+	default:
+		return "", fmt.Errorf("this opcode is not implemented")
+	}
+}
+
+func readSize(r *bufio.Reader) (int, error) {
+	b, err := r.ReadByte()
+	if err != nil {
+		// handle error
+		return -1, err
+	}
+	switch b >> 6 {
+	case 0:
+		// size is b & 0x3F
+		return int(b & 0x3F), nil
+	case 1:
+		// read next byte
+		b2, err := r.ReadByte()
+		if err != nil {
+			// handle error
+			return -1, err
+		}
+		// size is ((b&0x3F)<<8) | b2
+		return int((b & 0x3F) | b2), nil
+	case 2:
+		// read next 4 bytes
+		var buf [4]byte
+		if _, err = io.ReadFull(r, buf[:]); err != nil {
+			return -1, err
+		}
+		return int(binary.BigEndian.Uint32(buf[:])), nil
+	default:
+		// treat as error
+		return -1, fmt.Errorf("special string encoding which is not implemented")
+	}
+}
+
+// readUint32LE returns a little-endian uint32
+func readUint32LE(r *bufio.Reader) (uint32, error) {
+	var buf [4]byte
+	if _, err := io.ReadFull(r, buf[:]); err != nil {
+		return 0, err
+	}
+	return binary.LittleEndian.Uint32(buf[:]), nil
+}
+
+func parseRDBFile() error {
+	f, err := os.Open(dbfilename)
+	if err != nil {
+		// handle error
+		return err
+	}
+	defer func(f *os.File) {
+		err = f.Close()
+		if err != nil {
+			return
+		}
+	}(f)
+
+	// buf := make([]byte, 1024)
+	r := bufio.NewReader(f)
+
+	// first 9 bytes: REDIS0011 (52 45 44 49 53 30 30 31 31)
+	_, err = r.Discard(9)
+	if err != nil {
+		// handle error
+		return err
+	}
+	// next: 1 byte opcode + 1 byte length + length bytes data
+	for {
+		op, err := r.ReadByte()
+		if err != nil {
+			// handle error
+			return err
+		}
+
+		// expire time
+		var sec uint32
+
+		switch op {
+		case 0xfa:
+			key, err := readString(r)
+			if err != nil {
+				// handle error
+				return err
+			}
+			val, err := readString(r)
+			if err != nil {
+				// handle error
+				return err
+			}
+			_, _ = key, val
+		case 0xfe:
+			_, err = readSize(r)
+			if err != nil {
+				// handle error
+				return err
+			}
+		case 0xfb:
+			kvSize, err := readSize(r)
+			if err != nil {
+				// handle error
+				return err
+			}
+			expSize, err := readString(r)
+			if err != nil {
+				// handle error
+				return err
+			}
+			_, _ = kvSize, expSize
+		case 0xfc:
+			// not implemented
+			return nil
+		case 0xfd:
+			// expire time
+			sec, err = readUint32LE(r)
+			if err != nil {
+				// handle error
+				return err
+			}
+		case 0x00:
+			key, err := readString(r)
+			if err != nil {
+				// handle error
+				return err
+			}
+			val, err := readString(r)
+			if err != nil {
+				// handle error
+				return err
+			}
+			mu.Lock()
+			variables.Store(key, Value{val, time.Now().Add(time.Duration(sec))})
+			mu.Unlock()
+			return nil
+		case 0xff:
+			// not implemented
+			return nil
+		default:
+			return fmt.Errorf("not supported opcode type")
+		}
+
+	}
 }
