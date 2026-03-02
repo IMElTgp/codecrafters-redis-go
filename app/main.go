@@ -26,7 +26,7 @@ func main() {
 	}
 
 	if parseRDBFile() != nil {
-		return
+		// do nothing
 	}
 
 	// replica
