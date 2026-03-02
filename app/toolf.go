@@ -421,6 +421,15 @@ func readUint32LE(r *bufio.Reader) (uint32, error) {
 	return binary.LittleEndian.Uint32(buf[:]), nil
 }
 
+// readUint64LE returns a little-endian uint64
+func readUint64LE(r *bufio.Reader) (uint64, error) {
+	var buf [4]byte
+	if _, err := io.ReadFull(r, buf[:]); err != nil {
+		return 0, err
+	}
+	return binary.LittleEndian.Uint64(buf[:]), nil
+}
+
 func parseRDBFile() error {
 	f, err := os.Open(filepath.Join(dir, dbfilename))
 	if err != nil {
@@ -453,6 +462,10 @@ func parseRDBFile() error {
 
 		// expire time
 		var sec uint32
+		// whether to set expire time
+		var hasExpire bool
+		// expire time
+		var pendingExpire time.Time
 
 		switch op {
 		case 0xfa:
@@ -486,7 +499,13 @@ func parseRDBFile() error {
 			}
 			_, _ = kvSize, expSize
 		case 0xfc:
-			// not implemented
+			ms, err := readUint64LE(r)
+			if err != nil {
+				// handle error
+				return err
+			}
+			pendingExpire = time.UnixMilli(int64(ms))
+			hasExpire = true
 		case 0xfd:
 			// expire time
 			sec, err = readUint32LE(r)
@@ -494,6 +513,8 @@ func parseRDBFile() error {
 				// handle error
 				return err
 			}
+			pendingExpire = time.Unix(int64(sec), 0)
+			hasExpire = true
 		case 0x00:
 			key, err := readString(r)
 			if err != nil {
@@ -506,12 +527,14 @@ func parseRDBFile() error {
 				return err
 			}
 			mu.Lock()
-			// in case sec == 0 (which should be considered as infinite expiry)
-			if sec == 0 {
-				sec = math.MaxInt32
+			// in case no expire (expire time unreachable)
+			ex := time.Now().Add(time.Duration(math.MaxInt32))
+			// expire time set
+			if hasExpire {
+				ex = pendingExpire
+				hasExpire = false
 			}
-			t := time.Unix(int64(sec), 0)
-			variables.Store(key, Value{val, t})
+			variables.Store(key, Value{val, ex})
 			mu.Unlock()
 		case 0xff:
 			// not implemented
