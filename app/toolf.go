@@ -423,7 +423,7 @@ func readUint32LE(r *bufio.Reader) (uint32, error) {
 
 // readUint64LE returns a little-endian uint64
 func readUint64LE(r *bufio.Reader) (uint64, error) {
-	var buf [4]byte
+	var buf [8]byte
 	if _, err := io.ReadFull(r, buf[:]); err != nil {
 		return 0, err
 	}
