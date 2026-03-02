@@ -452,6 +452,12 @@ func parseRDBFile() error {
 		// handle error
 		return err
 	}
+	// expire time
+	var sec uint32
+	// whether to set expire time
+	var hasExpire bool
+	// expire time
+	var pendingExpire time.Time
 	// next: 1 byte opcode + 1 byte length + length bytes data
 	for {
 		op, err := r.ReadByte()
@@ -459,13 +465,6 @@ func parseRDBFile() error {
 			// handle error
 			return err
 		}
-
-		// expire time
-		var sec uint32
-		// whether to set expire time
-		var hasExpire bool
-		// expire time
-		var pendingExpire time.Time
 
 		switch op {
 		case 0xfa:
@@ -528,7 +527,7 @@ func parseRDBFile() error {
 			}
 			mu.Lock()
 			// in case no expire (expire time unreachable)
-			ex := time.Now().Add(time.Duration(math.MaxInt32))
+			ex := time.Now().Add(time.Duration(math.MaxInt32) * time.Second)
 			// expire time set
 			if hasExpire {
 				ex = pendingExpire
