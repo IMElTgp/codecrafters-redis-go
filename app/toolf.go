@@ -507,6 +507,7 @@ func parseRDBFile() error {
 				return err
 			}
 			mu.Lock()
+			// in case sec == 0 (which should be considered as infinite expiry)
 			if sec == 0 {
 				sec = math.MaxInt32
 			}
