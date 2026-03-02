@@ -508,7 +508,6 @@ func parseRDBFile() error {
 			mu.Lock()
 			variables.Store(key, Value{val, time.Now().Add(time.Duration(sec))})
 			mu.Unlock()
-			return nil
 		case 0xff:
 			// not implemented
 			return nil
