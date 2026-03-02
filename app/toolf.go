@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -506,6 +507,9 @@ func parseRDBFile() error {
 				return err
 			}
 			mu.Lock()
+			if sec == 0 {
+				sec = math.MaxInt32
+			}
 			variables.Store(key, Value{val, time.Now().Add(time.Duration(sec))})
 			mu.Unlock()
 		case 0xff:
