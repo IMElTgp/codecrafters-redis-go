@@ -25,9 +25,9 @@ func main() {
 		serverRole = true
 	}
 
-	if parseRDBFile() != nil {
+	if err := parseRDBFile(); err != nil {
 		// do nothing
-		fmt.Println("parseRDBFile failed")
+		fmt.Println("parseRDBFile failed:", err)
 	}
 
 	// replica
