@@ -452,6 +452,8 @@ func parseRDBFile() error {
 		// handle error
 		return err
 	}
+	// these following variables concerning expiry time are put outside the loop
+	// that's because one key-value pair parsing procedure walks across multiple loops
 	// expire time
 	var sec uint32
 	// whether to set expire time
