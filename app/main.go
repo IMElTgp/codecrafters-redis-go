@@ -27,6 +27,7 @@ func main() {
 
 	if parseRDBFile() != nil {
 		// do nothing
+		fmt.Println("parseRDBFile failed")
 	}
 
 	// replica
