@@ -1111,3 +1111,34 @@ func (c *Conn) runCONFIG(args []string) error {
 
 	return err
 }
+
+func (c *Conn) runKEYS(args []string) error {
+	if len(args) != 2 {
+		// usage: KEYS "<key name>"
+		return fmt.Errorf("KEYS: argument count mismatch")
+	}
+
+	// for this stage, only consider KEYS *
+	keyList := make([]string, 0)
+	mu.Lock()
+	variables.Range(func(key, value any) bool {
+		k := key.(string)
+		_ = value.(string)
+		keyList = append(keyList, k)
+		return true
+	})
+	mu.Unlock()
+	_, err := c.write([]byte(fmt.Sprintf("*%d\r\n", len(keyList))))
+	if err != nil {
+		// handle error
+		return err
+	}
+	for _, key := range keyList {
+		_, err = c.write([]byte(serialize(key)))
+		if err != nil {
+			// handle error
+			return err
+		}
+	}
+	return nil
+}
