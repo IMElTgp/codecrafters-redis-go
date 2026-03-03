@@ -1149,7 +1149,7 @@ func (c *Conn) runSUBSCRIBE(args []string) error {
 		return fmt.Errorf("SUBSCRIBE: argument count mismatch")
 	}
 	mu.Lock()
-	subscribedChan[args[0]] = struct{}{}
+	subscribedChan[c.Conn][args[0]] = struct{}{}
 	lenSubscribedChan := len(subscribedChan)
 	mu.Unlock()
 	// hard coded so far

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -79,7 +80,7 @@ var dir string
 var dbfilename string
 
 // subscribedChan stores channel names subscribed by this server
-var subscribedChan = make(map[string]struct{})
+var subscribedChan = make(map[net.Conn]map[string]struct{}) // TODO
 
 // tool function for getting list copy from Map
 func getCopy(key string) ([]any, error) {
