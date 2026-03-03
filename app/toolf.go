@@ -79,7 +79,7 @@ var dir string
 var dbfilename string
 
 // subscribedChan stores channel names subscribed by this server
-var subscribedChan map[string]struct{}
+var subscribedChan = make(map[string]struct{})
 
 // tool function for getting list copy from Map
 func getCopy(key string) ([]any, error) {
