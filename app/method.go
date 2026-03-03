@@ -13,9 +13,12 @@ import (
 
 // if in subscribe mode, stop certain commands from executing and return error
 func (c *Conn) mustInSubscribeMode() bool {
+	mu.Lock()
 	if !inSubscribeMode[c.Conn] {
+		mu.Unlock()
 		return false
 	}
+	mu.Unlock()
 	_, _ = c.write([]byte("-ERR Can't execute 'echo': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context"))
 	return true
 }
@@ -1157,9 +1160,10 @@ func (c *Conn) runSUBSCRIBE(args []string) error {
 		// usage: SUBSCRIBE <chan name>
 		return fmt.Errorf("SUBSCRIBE: argument count mismatch")
 	}
+
+	mu.Lock()
 	// this client enters subscribe mode after SUBSCRIBE command
 	inSubscribeMode[c.Conn] = true
-	mu.Lock()
 	// in case subscribeChan[c.Conn] is nil
 	if subscribedChan[c.Conn] == nil {
 		subscribedChan[c.Conn] = make(map[string]struct{})

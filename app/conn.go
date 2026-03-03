@@ -141,7 +141,9 @@ func handleConn(c *Conn) {
 				goto skip
 			}
 
+			mu.Lock()
 			if !executableInSubscribeMode[strings.ToUpper(args[0])] {
+				mu.Unlock()
 				_ = c.mustInSubscribeMode()
 				goto skip
 			}
