@@ -1142,3 +1142,13 @@ func (c *Conn) runKEYS(args []string) error {
 	}
 	return nil
 }
+
+func (c *Conn) runSUBSCRIBE(args []string) error {
+	if len(args) != 1 {
+		// usage: SUBSCRIBE <chan name>
+		return fmt.Errorf("SUBSCRIBE: argument count mismatch")
+	}
+	// hard coded so far
+	_, err := c.write([]byte("*3\r\n" + serialize("subscribe") + serialize(args[0]) + ":1\r\n"))
+	return err
+}
