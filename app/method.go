@@ -11,6 +11,15 @@ import (
 	"time"
 )
 
+// if in subscribe mode, stop certain commands from executing and return error
+func (c *Conn) mustInSubscribeMode() bool {
+	if !inSubscribeMode[c.Conn] {
+		return false
+	}
+	_, _ = c.write([]byte("-ERR Can't execute 'echo': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context"))
+	return true
+}
+
 func (c *Conn) runPING() error {
 	_, err := c.write([]byte("+PONG\r\n"))
 	if err != nil {
@@ -1149,6 +1158,7 @@ func (c *Conn) runSUBSCRIBE(args []string) error {
 		return fmt.Errorf("SUBSCRIBE: argument count mismatch")
 	}
 	mu.Lock()
+	// in case subscribeChan[c.Conn] is nil
 	if subscribedChan[c.Conn] == nil {
 		subscribedChan[c.Conn] = make(map[string]struct{})
 	}

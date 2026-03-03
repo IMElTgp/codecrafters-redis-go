@@ -79,8 +79,21 @@ var dir string
 // dbfilename is the name of the RDB file
 var dbfilename string
 
-// subscribedChan stores channel names subscribed by this server
-var subscribedChan = make(map[net.Conn]map[string]struct{}) // TODO
+// subscribedChan stores channel names subscribed by client
+var subscribedChan = make(map[net.Conn]map[string]struct{})
+
+// inSubscribeMode marks whether a client is in subscribe mode (executable commands restricted)
+var inSubscribeMode = make(map[net.Conn]bool)
+
+// executableInSubscribeMode is the list of executable commands in subscribe mode
+var executableInSubscribeMode = map[string]bool{
+	"SUBSCRIBE":    true,
+	"UNSUBSCRIBE":  true,
+	"PSUBSCRIBE":   true,
+	"PUNSUBSCRIBE": true,
+	"PING":         true,
+	"QUIT":         true,
+}
 
 // tool function for getting list copy from Map
 func getCopy(key string) ([]any, error) {
