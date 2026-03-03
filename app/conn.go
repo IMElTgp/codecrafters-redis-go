@@ -147,6 +147,7 @@ func handleConn(c *Conn) {
 				_ = c.mustInSubscribeMode()
 				goto skip
 			}
+			mu.Unlock()
 
 			switch strings.ToUpper(args[0]) {
 			case "PING":
