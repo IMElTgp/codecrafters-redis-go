@@ -78,6 +78,9 @@ var dir string
 // dbfilename is the name of the RDB file
 var dbfilename string
 
+// subscribedChan stores channel names subscribed by this server
+var subscribedChan map[string]struct{}
+
 // tool function for getting list copy from Map
 func getCopy(key string) ([]any, error) {
 	list, ok := lists.Load(key)

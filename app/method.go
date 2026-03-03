@@ -1148,7 +1148,12 @@ func (c *Conn) runSUBSCRIBE(args []string) error {
 		// usage: SUBSCRIBE <chan name>
 		return fmt.Errorf("SUBSCRIBE: argument count mismatch")
 	}
+	mu.Lock()
+	subscribedChan[args[0]] = struct{}{}
+	lenSubscribedChan := len(subscribedChan)
+	mu.Unlock()
 	// hard coded so far
-	_, err := c.write([]byte("*3\r\n" + serialize("subscribe") + serialize(args[0]) + ":1\r\n"))
+	_, err := c.write([]byte("*3\r\n" + serialize("subscribe") + serialize(args[0]) + ":" + strconv.Itoa(lenSubscribedChan) + "\r\n"))
 	return err
+
 }
