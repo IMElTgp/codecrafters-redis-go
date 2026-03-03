@@ -13,12 +13,9 @@ import (
 
 // if in subscribe mode, stop certain commands from executing and return error
 func (c *Conn) mustInSubscribeMode(cmdName string) bool {
-	mu.Lock()
 	if !inSubscribeMode[c.Conn] {
-		mu.Unlock()
 		return false
 	}
-	mu.Unlock()
 	_, _ = c.write([]byte("-ERR Can't execute '" + cmdName + "': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context\r\n"))
 	return true
 }
