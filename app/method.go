@@ -1194,6 +1194,7 @@ func (c *Conn) runPUBLISH(args []string) error {
 		mu.Unlock()
 		_, err := client.Write([]byte(serialize(args[1])))
 		if err != nil {
+			mu.Unlock()
 			// handle error
 			return err
 		}
