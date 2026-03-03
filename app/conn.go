@@ -143,11 +143,15 @@ func handleConn(c *Conn) {
 
 			mu.Lock()
 			if !executableInSubscribeMode[strings.ToUpper(args[0])] {
+				// not executable in subscribe mode
 				mu.Unlock()
+				// check if the client is in subscribe mode
 				if c.mustInSubscribeMode(strings.ToUpper(args[0])) {
+					// if so, skip this command with err msg sent
 					goto skip
 				}
 			} else {
+				// executable in subscribe mode, execute without any condition
 				mu.Unlock()
 			}
 

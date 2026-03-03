@@ -24,13 +24,16 @@ func (c *Conn) mustInSubscribeMode(cmdName string) bool {
 }
 
 func (c *Conn) runPING() error {
-	_, err := c.write([]byte("+PONG\r\n"))
-	if err != nil {
-		// handle error
+	mu.Lock()
+	if inSubscribeMode[c.Conn] {
+		mu.Unlock()
+		_, err := c.write([]byte("*2\r\n" + serialize("pong") + serialize("")))
 		return err
 	}
+	mu.Unlock()
 
-	return nil
+	_, err := c.write([]byte("+PONG\r\n"))
+	return err
 }
 
 func (c *Conn) runECHO(strs []string) error {
