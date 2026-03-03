@@ -1194,7 +1194,7 @@ func (c *Conn) runPUBLISH(args []string) error {
 	lenSubscribedTo := len(subscribedTo[args[0]])
 	for _, client := range subscribedTo[args[0]] {
 		mu.Unlock()
-		_, err := client.Write([]byte(serialize(args[1])))
+		_, err := client.Write([]byte("*3\r\n" + serialize("message") + serialize(args[0]) + serialize(args[1])))
 		if err != nil {
 			mu.Unlock()
 			// handle error
