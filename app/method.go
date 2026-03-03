@@ -25,8 +25,10 @@ func (c *Conn) mustInSubscribeMode(cmdName string) bool {
 
 func (c *Conn) runPING() error {
 	mu.Lock()
+	// if in subscribe mode, do special pong
 	if inSubscribeMode[c.Conn] {
 		mu.Unlock()
+		// a RESP array consisting of a bulk string "pong" and an empty bulk string
 		_, err := c.write([]byte("*2\r\n" + serialize("pong") + serialize("")))
 		return err
 	}
@@ -1173,9 +1175,29 @@ func (c *Conn) runSUBSCRIBE(args []string) error {
 	}
 	subscribedChan[c.Conn][args[0]] = struct{}{}
 	lenSubscribedChan := len(subscribedChan[c.Conn])
+	subscribedTo[args[0]] = append(subscribedTo[args[0]], c.Conn)
 	mu.Unlock()
 	// hard coded so far
 	_, err := c.write([]byte("*3\r\n" + serialize("subscribe") + serialize(args[0]) + ":" + strconv.Itoa(lenSubscribedChan) + "\r\n"))
 	return err
+}
 
+func (c *Conn) runPUBLISH(args []string) error {
+	if len(args) != 2 {
+		// usage: PUBLISH <channel name> <message>
+		return fmt.Errorf("PUBLISH: argument count mismatch")
+	}
+
+	// broadcast to all clients subscribing to this channel
+	mu.Lock()
+	for _, client := range subscribedTo[args[0]] {
+		mu.Unlock()
+		_, err := client.Write([]byte(serialize(args[1])))
+		if err != nil {
+			// handle error
+			return err
+		}
+		mu.Lock()
+	}
+	return nil
 }

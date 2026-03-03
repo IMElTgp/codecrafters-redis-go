@@ -82,6 +82,9 @@ var dbfilename string
 // subscribedChan stores channel names subscribed by client
 var subscribedChan = make(map[net.Conn]map[string]struct{})
 
+// subscribedTo stores client connections that subscribe to certain channel
+var subscribedTo = make(map[string][]net.Conn)
+
 // inSubscribeMode marks whether a client is in subscribe mode (executable commands restricted)
 var inSubscribeMode = make(map[net.Conn]bool)
 
