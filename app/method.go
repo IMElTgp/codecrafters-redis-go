@@ -19,7 +19,7 @@ func (c *Conn) mustInSubscribeMode() bool {
 		return false
 	}
 	mu.Unlock()
-	_, _ = c.write([]byte("-ERR Can't execute 'echo': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context"))
+	_, _ = c.write([]byte("-ERR Can't execute 'echo': only (P|S)SUBSCRIBE / (P|S)UNSUBSCRIBE / PING / QUIT / RESET are allowed in this context\r\n"))
 	return true
 }
 
