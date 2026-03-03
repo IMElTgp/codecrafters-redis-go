@@ -1190,6 +1190,8 @@ func (c *Conn) runPUBLISH(args []string) error {
 
 	// broadcast to all clients subscribing to this channel
 	mu.Lock()
+	// length of subscribedTo[args[0]]
+	lenSubscribedTo := len(subscribedTo[args[0]])
 	for _, client := range subscribedTo[args[0]] {
 		mu.Unlock()
 		_, err := client.Write([]byte(serialize(args[1])))
@@ -1200,5 +1202,7 @@ func (c *Conn) runPUBLISH(args []string) error {
 		}
 		mu.Lock()
 	}
-	return nil
+	mu.Unlock()
+	_, err := c.write([]byte(":" + strconv.Itoa(lenSubscribedTo) + "\r\n"))
+	return err
 }
