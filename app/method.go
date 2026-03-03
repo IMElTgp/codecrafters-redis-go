@@ -1206,3 +1206,32 @@ func (c *Conn) runPUBLISH(args []string) error {
 	_, err := c.write([]byte(":" + strconv.Itoa(lenSubscribedTo) + "\r\n"))
 	return err
 }
+
+func (c *Conn) runUNSUBSCRIBE(args []string) error {
+	if len(args) != 1 {
+		// usage: SUBSCRIBE <chan name>
+		return fmt.Errorf("UNSUBSCRIBE: argument count mismatch")
+	}
+
+	// delete args[0] from c's subscribedChan
+	mu.Lock()
+	delete(subscribedChan[c.Conn], args[0])
+	// delete c.Conn from subscribedTo[args[0]]
+	for i, client := range subscribedTo[args[0]] {
+		if client == c.Conn {
+			if len(subscribedTo[args[0]]) == 1 {
+				subscribedTo[args[0]] = []net.Conn{}
+			} else if i != 0 && i != len(subscribedTo[args[0]]) {
+				subscribedTo[args[0]] = append(subscribedTo[args[0]][:i], subscribedTo[args[0]][i+1:]...)
+			} else if i == 0 {
+				subscribedTo[args[0]] = subscribedTo[args[0]][1:]
+			} else {
+				subscribedTo[args[0]] = subscribedTo[args[0]][:len(subscribedTo[args[0]])-1]
+			}
+		}
+	}
+	lenSubscribedChan := len(subscribedChan[c.Conn])
+	mu.Unlock()
+	_, err := c.write([]byte("*3\r\n" + serialize("unsubscribe") + serialize(args[0]) + ":" + strconv.Itoa(lenSubscribedChan) + "\r\n"))
+	return err
+}
