@@ -1157,6 +1157,8 @@ func (c *Conn) runSUBSCRIBE(args []string) error {
 		// usage: SUBSCRIBE <chan name>
 		return fmt.Errorf("SUBSCRIBE: argument count mismatch")
 	}
+	// this client enters subscribe mode after SUBSCRIBE command
+	inSubscribeMode[c.Conn] = true
 	mu.Lock()
 	// in case subscribeChan[c.Conn] is nil
 	if subscribedChan[c.Conn] == nil {
