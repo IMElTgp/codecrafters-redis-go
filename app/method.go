@@ -1153,7 +1153,7 @@ func (c *Conn) runSUBSCRIBE(args []string) error {
 		subscribedChan[c.Conn] = make(map[string]struct{})
 	}
 	subscribedChan[c.Conn][args[0]] = struct{}{}
-	lenSubscribedChan := len(subscribedChan)
+	lenSubscribedChan := len(subscribedChan[c.Conn])
 	mu.Unlock()
 	// hard coded so far
 	_, err := c.write([]byte("*3\r\n" + serialize("subscribe") + serialize(args[0]) + ":" + strconv.Itoa(lenSubscribedChan) + "\r\n"))
