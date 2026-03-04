@@ -1296,16 +1296,60 @@ func (c *Conn) runZRANK(args []string) error {
 		return fmt.Errorf("ZRANK: argument count mismatch")
 	}
 	idx := -1
+	mu.Lock()
 	for i := range sortedSets[args[0]] {
 		if sortedSets[args[0]][i].name == args[1] {
 			idx = i
 			break
 		}
 	}
+	mu.Unlock()
 	if idx == -1 {
 		_, err := c.write([]byte("$-1\r\n"))
 		return err
 	}
 	_, err := c.write([]byte(":" + strconv.Itoa(idx) + "\r\n"))
 	return err
+}
+
+func (c *Conn) runZRANGE(args []string) error {
+	if len(args) != 3 {
+		// usage: <sorted set name> <begin index> <end index>
+		return fmt.Errorf("ZRANGE: argument count mismatch")
+	}
+	mu.Lock()
+	begin, err := strconv.Atoi(args[1])
+	if err != nil {
+		// handle error
+		return err
+	}
+	end, err := strconv.Atoi(args[2])
+	if err != nil {
+		// handle error
+		return err
+	}
+	if begin < 0 {
+		begin += len(sortedSets[args[0]])
+	}
+	if end < 0 {
+		end += len(sortedSets[args[0]])
+	}
+	list := []Element{}
+	for i := begin; i <= end; i++ {
+		list = append(list, sortedSets[args[0]][i])
+	}
+	mu.Unlock()
+	_, err = c.write([]byte(":" + strconv.Itoa(len(list)) + "\r\n"))
+	if err != nil {
+		// handle error
+		return err
+	}
+	for _, l := range list {
+		_, err = c.write([]byte(serialize(l.name)))
+		if err != nil {
+			// handle error
+			return err
+		}
+	}
+	return nil
 }
