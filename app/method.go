@@ -1252,9 +1252,9 @@ func (c *Conn) runZADD(args []string) error {
 	if storedElements[sortedSetLocator{args[0], args[2]}] {
 		// stored, simply update
 		newElemAppended = 0
-		for _, elem := range sortedSets[args[0]] {
+		for i, elem := range sortedSets[args[0]] {
 			if elem.name == args[2] {
-				elem.score = score
+				sortedSets[args[0]][i].score = score
 			}
 		}
 	} else {
