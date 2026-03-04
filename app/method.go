@@ -1248,8 +1248,17 @@ func (c *Conn) runZADD(args []string) error {
 		// handle error
 		return err
 	}
-	// if a sorted set doesn't exist, create it (here we are using simple map)
-	if len(sortedSets[args[0]]) == 0 {
+	newElemAppended := 1
+	if storedElements[sortedSetLocator{args[0], args[2]}] {
+		// stored, simply update
+		newElemAppended = 0
+		for _, elem := range sortedSets[args[0]] {
+			if elem.name == args[2] {
+				elem.score = score
+			}
+		}
+	} else if len(sortedSets[args[0]]) == 0 {
+		// if a sorted set doesn't exist, create it (here we are using simple map)
 		// append to it straightly
 		sortedSets[args[0]] = append(sortedSets[args[0]], Element{args[2], score})
 	} else {
@@ -1268,8 +1277,7 @@ func (c *Conn) runZADD(args []string) error {
 			sortedSets[args[0]] = append(sortedSets[args[0]][:idx], append([]Element{{args[2], score}}, sortedSets[args[0]][idx:]...)...)
 		}
 	}
-	lenSortedSet := len(sortedSets[args[0]])
 	mu.Unlock()
-	_, err = c.write([]byte(":" + strconv.Itoa(lenSortedSet) + "\r\n"))
+	_, err = c.write([]byte(":" + strconv.Itoa(newElemAppended) + "\r\n"))
 	return err
 }

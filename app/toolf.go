@@ -107,6 +107,13 @@ type Element struct {
 // sortedSets represents a sorted set map (string <-> sorted set)
 var sortedSets = make(map[string][]Element)
 
+type sortedSetLocator struct {
+	setName, elemName string
+}
+
+// storedElements stores element names which have been stored in sortedSets
+var storedElements = make(map[sortedSetLocator]bool)
+
 // tool function for getting list copy from Map
 func getCopy(key string) ([]any, error) {
 	list, ok := lists.Load(key)
