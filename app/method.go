@@ -1302,6 +1302,10 @@ func (c *Conn) runZRANK(args []string) error {
 			break
 		}
 	}
+	if idx == -1 {
+		_, err := c.write([]byte("*-1\r\n"))
+		return err
+	}
 	_, err := c.write([]byte(":" + strconv.Itoa(idx) + "\r\n"))
 	return err
 }
