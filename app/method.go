@@ -1254,6 +1254,7 @@ func (c *Conn) runZADD(args []string) error {
 		newElemAppended = 0
 		for i, elem := range sortedSets[args[0]] {
 			if elem.name == args[2] {
+				// remember not to use elem
 				sortedSets[args[0]][i].score = score
 			}
 		}
@@ -1404,5 +1405,26 @@ func (c *Conn) runZSCORE(args []string) error {
 		return err
 	}
 	_, err := c.write([]byte(serialize(strconv.FormatFloat(score, 'g', -1, 64))))
+	return err
+}
+
+func (c *Conn) runZREM(args []string) error {
+	if len(args) != 2 {
+		// usage: <sorted set name> <element name>
+		return fmt.Errorf("ZREM: argument count mismatch")
+	}
+	// a mark that indicates whether a successful removal occurred
+	removed := 0
+	// remove an element according to args[1], a.k.a elem name
+	mu.Lock()
+	for i := range sortedSets[args[0]] {
+		if sortedSets[args[0]][i].name == args[1] {
+			// remove this elem
+			removed = 1
+			sortedSets[args[0]] = append(sortedSets[args[0]][:i], sortedSets[args[0]][i+1:]...)
+		}
+	}
+	mu.Unlock()
+	_, err := c.write([]byte(fmt.Sprintf(":%d\r\n", removed)))
 	return err
 }
