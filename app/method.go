@@ -1333,12 +1333,14 @@ func (c *Conn) runZRANGE(args []string) error {
 	// negative indices
 	if begin < 0 {
 		begin += len(sortedSets[args[0]])
+		// out of range, considered as 0
 		if begin < 0 {
 			begin = 0
 		}
 	}
 	if end < 0 {
 		end += len(sortedSets[args[0]])
+		// out of range, considered as 0
 		if end < 0 {
 			end = 0
 		}
@@ -1365,4 +1367,17 @@ func (c *Conn) runZRANGE(args []string) error {
 		}
 	}
 	return nil
+}
+
+func (c *Conn) runZCARD(args []string) error {
+	if len(args) != 1 {
+		// usage: <sorted set name>
+		return fmt.Errorf("ZCARD: argument count mismatch")
+	}
+
+	mu.Lock()
+	lenSortedSet := len(sortedSets[args[0]])
+	mu.Unlock()
+	_, err := c.write([]byte(":" + strconv.Itoa(lenSortedSet) + "\r\n"))
+	return err
 }
