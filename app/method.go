@@ -1341,7 +1341,7 @@ func (c *Conn) runZRANGE(args []string) error {
 		list = append(list, sortedSets[args[0]][i])
 	}
 	mu.Unlock()
-	_, err = c.write([]byte(":" + strconv.Itoa(len(list)) + "\r\n"))
+	_, err = c.write([]byte("*" + strconv.Itoa(len(list)) + "\r\n"))
 	if err != nil {
 		// handle error
 		return err
