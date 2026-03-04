@@ -1257,24 +1257,28 @@ func (c *Conn) runZADD(args []string) error {
 				elem.score = score
 			}
 		}
-	} else if len(sortedSets[args[0]]) == 0 {
-		// if a sorted set doesn't exist, create it (here we are using simple map)
-		// append to it straightly
-		sortedSets[args[0]] = append(sortedSets[args[0]], Element{args[2], score})
 	} else {
-		// make it sorted using binary search
-		idx := sort.Search(len(sortedSets[args[0]]), func(i int) bool {
-			return sortedSets[args[0]][i].score > score
-		})
-		if idx == len(sortedSets[args[0]]) {
-			// append to the end
+		// mark it as stored
+		storedElements[sortedSetLocator{args[0], args[2]}] = true
+		if len(sortedSets[args[0]]) == 0 {
+			// if a sorted set doesn't exist, create it (here we are using simple map)
+			// append to it straightly
 			sortedSets[args[0]] = append(sortedSets[args[0]], Element{args[2], score})
-		} else if idx <= 0 {
-			// no such idx
-			sortedSets[args[0]] = append([]Element{{args[2], score}}, sortedSets[args[0]]...)
 		} else {
-			// append between idx-1, idx
-			sortedSets[args[0]] = append(sortedSets[args[0]][:idx], append([]Element{{args[2], score}}, sortedSets[args[0]][idx:]...)...)
+			// make it sorted using binary search
+			idx := sort.Search(len(sortedSets[args[0]]), func(i int) bool {
+				return sortedSets[args[0]][i].score > score
+			})
+			if idx == len(sortedSets[args[0]]) {
+				// append to the end
+				sortedSets[args[0]] = append(sortedSets[args[0]], Element{args[2], score})
+			} else if idx <= 0 {
+				// no such idx
+				sortedSets[args[0]] = append([]Element{{args[2], score}}, sortedSets[args[0]]...)
+			} else {
+				// append between idx-1, idx
+				sortedSets[args[0]] = append(sortedSets[args[0]][:idx], append([]Element{{args[2], score}}, sortedSets[args[0]][idx:]...)...)
+			}
 		}
 	}
 	mu.Unlock()
