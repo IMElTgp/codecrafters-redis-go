@@ -98,6 +98,15 @@ var executableInSubscribeMode = map[string]bool{
 	"QUIT":         true,
 }
 
+// Element is stored in sorted set
+type Element struct {
+	name  string
+	score float64
+}
+
+// sortedSets represents a sorted set map (string <-> sorted set)
+var sortedSets = make(map[string][]Element)
+
 // tool function for getting list copy from Map
 func getCopy(key string) ([]any, error) {
 	list, ok := lists.Load(key)

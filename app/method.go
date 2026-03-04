@@ -1177,7 +1177,7 @@ func (c *Conn) runSUBSCRIBE(args []string) error {
 	lenSubscribedChan := len(subscribedChan[c.Conn])
 	subscribedTo[args[0]] = append(subscribedTo[args[0]], c.Conn)
 	mu.Unlock()
-	// hard coded so far
+
 	_, err := c.write([]byte("*3\r\n" + serialize("subscribe") + serialize(args[0]) + ":" + strconv.Itoa(lenSubscribedChan) + "\r\n"))
 	return err
 }
@@ -1233,5 +1233,43 @@ func (c *Conn) runUNSUBSCRIBE(args []string) error {
 	lenSubscribedChan := len(subscribedChan[c.Conn])
 	mu.Unlock()
 	_, err := c.write([]byte("*3\r\n" + serialize("unsubscribe") + serialize(args[0]) + ":" + strconv.Itoa(lenSubscribedChan) + "\r\n"))
+	return err
+}
+
+func (c *Conn) runZADD(args []string) error {
+	if len(args) != 3 {
+		// usage: <sorted set name> <element score> <element name>
+		return fmt.Errorf("ZADD: argument count mismatch")
+	}
+	mu.Lock()
+	// score to append
+	score, err := strconv.ParseFloat(args[1], 64)
+	if err != nil {
+		// handle error
+		return err
+	}
+	// if a sorted set doesn't exist, create it (here we are using simple map)
+	if len(sortedSets[args[0]]) == 0 {
+		// append to it straightly
+		sortedSets[args[0]] = append(sortedSets[args[0]], Element{args[2], score})
+	} else {
+		// make it sorted using binary search
+		idx := sort.Search(len(sortedSets[args[0]]), func(i int) bool {
+			return sortedSets[args[0]][i].score > score
+		})
+		if idx == len(sortedSets[args[0]]) {
+			// append to the end
+			sortedSets[args[0]] = append(sortedSets[args[0]], Element{args[2], score})
+		} else if idx <= 0 {
+			// no such idx
+			sortedSets[args[0]] = append([]Element{{args[2], score}}, sortedSets[args[0]]...)
+		} else {
+			// append between idx-1, idx
+			sortedSets[args[0]] = append(sortedSets[args[0]][:idx], append([]Element{{args[2], score}}, sortedSets[args[0]][idx:]...)...)
+		}
+	}
+	lenSortedSet := len(sortedSets[args[0]])
+	mu.Unlock()
+	_, err = c.write([]byte(":" + strconv.Itoa(lenSortedSet) + "\r\n"))
 	return err
 }
