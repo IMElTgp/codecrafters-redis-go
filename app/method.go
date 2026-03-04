@@ -1331,10 +1331,10 @@ func (c *Conn) runZRANGE(args []string) error {
 		return err
 	}
 	// negative indices
-	if begin < 0 {
+	for begin < 0 {
 		begin += len(sortedSets[args[0]])
 	}
-	if end < 0 {
+	for end < 0 {
 		end += len(sortedSets[args[0]])
 	}
 	// corner case
