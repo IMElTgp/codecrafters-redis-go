@@ -1321,10 +1321,12 @@ func (c *Conn) runZRANGE(args []string) error {
 	begin, err := strconv.Atoi(args[1])
 	if err != nil {
 		// handle error
+		mu.Unlock()
 		return err
 	}
 	end, err := strconv.Atoi(args[2])
 	if err != nil {
+		mu.Unlock()
 		// handle error
 		return err
 	}
