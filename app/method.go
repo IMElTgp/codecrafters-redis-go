@@ -1267,7 +1267,11 @@ func (c *Conn) runZADD(args []string) error {
 		} else {
 			// make it sorted using binary search
 			idx := sort.Search(len(sortedSets[args[0]]), func(i int) bool {
-				return sortedSets[args[0]][i].score > score
+				if sortedSets[args[0]][i].score != score {
+					return sortedSets[args[0]][i].score > score
+				}
+				// lexicographic tiebreaker
+				return sortedSets[args[0]][i].name >= args[2]
 			})
 			if idx == len(sortedSets[args[0]]) {
 				// append to the end
@@ -1283,5 +1287,21 @@ func (c *Conn) runZADD(args []string) error {
 	}
 	mu.Unlock()
 	_, err = c.write([]byte(":" + strconv.Itoa(newElemAppended) + "\r\n"))
+	return err
+}
+
+func (c *Conn) runZRANK(args []string) error {
+	if len(args) != 2 {
+		// usage: <sorted set name> <element name>
+		return fmt.Errorf("ZRANK: argument count mismatch")
+	}
+	idx := 0
+	for i := range sortedSets[args[0]] {
+		if sortedSets[args[0]][i].name == args[1] {
+			idx = i
+			break
+		}
+	}
+	_, err := c.write([]byte(":" + strconv.Itoa(idx) + "\r\n"))
 	return err
 }
