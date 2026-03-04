@@ -1381,3 +1381,28 @@ func (c *Conn) runZCARD(args []string) error {
 	_, err := c.write([]byte(":" + strconv.Itoa(lenSortedSet) + "\r\n"))
 	return err
 }
+
+func (c *Conn) runZSCORE(args []string) error {
+	if len(args) != 2 {
+		// usage: <sorted set name> <element name>
+		return fmt.Errorf("ZSCORE: argument count mismatch")
+	}
+
+	const MagicNum = 0xABCDABCD
+	score := float64(MagicNum)
+
+	mu.Lock()
+	for _, elem := range sortedSets[args[0]] {
+		if elem.name == args[1] {
+			score = elem.score
+			break
+		}
+	}
+	mu.Unlock()
+	if score == MagicNum {
+		_, err := c.write([]byte("$-1\r\n"))
+		return err
+	}
+	_, err := c.write([]byte(serialize(strconv.FormatFloat(score, 'g', -1, 64))))
+	return err
+}
