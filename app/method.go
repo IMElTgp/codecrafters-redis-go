@@ -1336,8 +1336,9 @@ func (c *Conn) runZRANGE(args []string) error {
 	if end < 0 {
 		end += len(sortedSets[args[0]])
 	}
-	end = min(end, len(sortedSets[args[0]])-1)
-	begin = min(begin, len(sortedSets[args[0]])-1)
+	if end > len(sortedSets[args[0]])-1 && len(sortedSets) > 0 {
+		end = len(sortedSets[args[0]]) - 1
+	}
 	list := []Element{}
 	for i := begin; i <= end; i++ {
 		list = append(list, sortedSets[args[0]][i])
