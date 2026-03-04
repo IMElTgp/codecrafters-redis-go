@@ -1295,7 +1295,7 @@ func (c *Conn) runZRANK(args []string) error {
 		// usage: <sorted set name> <element name>
 		return fmt.Errorf("ZRANK: argument count mismatch")
 	}
-	idx := 0
+	idx := -1
 	for i := range sortedSets[args[0]] {
 		if sortedSets[args[0]][i].name == args[1] {
 			idx = i
