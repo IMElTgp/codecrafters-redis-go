@@ -1462,7 +1462,7 @@ func (c *Conn) runGEOADD(args []string) error {
 
 	// silently run ZADD with score calculated from longitude and latitude
 	c.silent = true
-	err = c.runZADD([]string{args[0], strconv.FormatFloat(score, "g", -1, 64), args[3]})
+	err = c.runZADD([]string{args[0], strconv.FormatFloat(score, 'g', -1, 64), args[3]})
 	if err != nil {
 		// handle error
 		return err
