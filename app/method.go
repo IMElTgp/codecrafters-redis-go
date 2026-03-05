@@ -1450,7 +1450,7 @@ func (c *Conn) runGEOADD(args []string) error {
 	const MaxLatitude = 85.05112878
 	// validate longitude and latitude
 	if math.Abs(longitude) > 180 || math.Abs(latitude) > MaxLatitude {
-		errMsg := fmt.Sprintf("-ERR invalid longitude,latitude pair %f,%f", longitude, latitude)
+		errMsg := fmt.Sprintf("-ERR invalid longitude,latitude pair %f,%f\r\n", longitude, latitude)
 		_, err = c.write([]byte(errMsg))
 		return err
 	}
