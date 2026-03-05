@@ -605,7 +605,7 @@ func spread(w int) int64 {
 
 func interleave(normalLongitude, normalLatitude int) int64 {
 	// first, spread normal values into 64-bit integers
-	i64Longitude, i64Latitude := spread(normalLongitude), spread(normalLongitude)
+	i64Longitude, i64Latitude := spread(normalLongitude), spread(normalLatitude)
 	// right shift i64Longitude by 1
 	// 0 y1 0 y2 ... 0 y32 -> y1 0 y2 0 ... y32 0
 	i64Longitude <<= 1
