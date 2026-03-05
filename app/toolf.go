@@ -582,3 +582,58 @@ func parseRDBFile() error {
 
 	}
 }
+
+func spread(w int) int64 {
+	// maybe not necessary in Go, but take w's lowest 32 bits
+	v := int64(w & 0xFFFFFFFF)
+	// bitwise operations which do works like:
+	// original: x1 x2 x3 ... x32 -> 32bits
+	// spread  : 0 x1 0 x2 ... 0 x32 -> 64bits
+	// the following algorithm is actually insane
+	// 1. split 32-bit halves into separated 16-bit blocks
+	v = (v | (v << 16)) & 0x0000FFFF0000FFFF
+	// 2. split each 16-bit blocks into 8-bit blocks
+	v = (v | (v << 8)) & 0x00FF00FF00FF00FF
+	// 3. split each 8-bit blocks into 4-bit blocks
+	v = (v | (v << 4)) & 0x0F0F0F0F0F0F0F0F
+	// 4. split each 4-bit blocks into 2-bit blocks
+	v = (v | (v << 2)) & 0x3333333333333333
+	// 5. finally, we have each bit separated by 0
+	v = (v | (v << 1)) & 0x5555555555555555
+	return v
+}
+
+func interleave(normalLongitude, normalLatitude int) int64 {
+	// first, spread normal values into 64-bit integers
+	i64Longitude, i64Latitude := spread(normalLongitude), spread(normalLongitude)
+	// right shift i64Longitude by 1
+	// 0 y1 0 y2 ... 0 y32 -> y1 0 y2 0 ... y32 0
+	i64Longitude <<= 1
+	// cross them
+	return i64Latitude | i64Longitude
+}
+
+// calculateScore converts longitude and latitude into score in sorted sets
+func calculateScore(longitude, latitude float64) (score float64) {
+	// Step 1: normalize longitude and latitude
+	// longitude and latitude range
+	const (
+		MaxLongitude = 180
+		MinLongitude = -180
+		MaxLatitude  = 85.05112878
+		MinLatitude  = -MaxLatitude
+
+		LongitudeRange = MaxLongitude - MinLongitude
+		LatitudeRange  = MaxLatitude - MinLatitude
+	)
+
+	normalizedLongitude := 1 << 26 * (longitude - MinLongitude) / LongitudeRange
+	normalizedLatitude := 1 << 26 * (latitude - MinLatitude) / LatitudeRange
+
+	// Step2: truncating normal values to integers
+	normalizedLongitudeI := int(normalizedLongitude)
+	normalizedLatitudeI := int(normalizedLatitude)
+
+	// Step3: interleaving normal values to a 64-bit integer
+	return float64(interleave(normalizedLongitudeI, normalizedLatitudeI))
+}
