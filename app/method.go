@@ -1484,7 +1484,7 @@ func (c *Conn) runGEOPOS(args []string) error {
 		// usage: <key> <location>
 		return fmt.Errorf("GEOPOS: argument count mismatch")
 	}*/
-	_, _ = c.write([]byte("this failed to execute"))
+	//_, _ = c.write([]byte("this failed to execute"))
 	// fetch score
 	c.silent = true
 	err := c.runZSCORE(args)
