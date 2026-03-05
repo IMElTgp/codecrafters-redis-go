@@ -1485,7 +1485,6 @@ func (c *Conn) runGEOPOS(args []string) error {
 		return fmt.Errorf("GEOPOS: argument count mismatch")
 	}
 
-	mu.Lock()
 	// fetch score
 	c.silent = true
 	err := c.runZSCORE(args)
@@ -1494,7 +1493,6 @@ func (c *Conn) runGEOPOS(args []string) error {
 		return err
 	}
 	c.silent = false
-	mu.Unlock()
 	longitude, latitude := decodeScore(readScore)
 	longitudeStr := strconv.FormatFloat(longitude, 'g', -1, 64)
 	latitudeStr := strconv.FormatFloat(latitude, 'g', -1, 64)
