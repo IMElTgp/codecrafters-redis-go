@@ -1480,23 +1480,31 @@ func (c *Conn) runGEOADD(args []string) error {
 }
 
 func (c *Conn) runGEOPOS(args []string) error {
-	/*if len(args) != 2 {
-		// usage: <key> <location>
-		return fmt.Errorf("GEOPOS: argument count mismatch")
-	}*/
-	//_, _ = c.write([]byte("this failed to execute"))
-	// fetch score
-	c.silent = true
-	err := c.runZSCORE(args)
-	if err != nil {
-		// handle error
+	scores := []float64{}
+	for i := 1; i < len(args); i++ {
+		// fetch score
+		c.silent = true
+		err := c.runZSCORE([]string{args[0], args[i]})
+		if err != nil {
+			// handle error
+			c.silent = false
+			//return err
+			_, err = c.write([]byte("*1\r\n*-1\r\n"))
+			return err
+		}
 		c.silent = false
-		//return err
+		score := readScore
+		scores = append(scores, score)
 	}
-	c.silent = false
-	longitude, latitude := decodeScore(readScore)
-	longitudeStr := strconv.FormatFloat(longitude, 'g', -1, 64)
-	latitudeStr := strconv.FormatFloat(latitude, 'g', -1, 64)
-	_, err = c.write([]byte("*2\r\n" + serialize(longitudeStr) + serialize(latitudeStr)))
-	return err
+	for _, score := range scores {
+		longitude, latitude := decodeScore(score)
+		longitudeStr := strconv.FormatFloat(longitude, 'g', -1, 64)
+		latitudeStr := strconv.FormatFloat(latitude, 'g', -1, 64)
+		_, err := c.write([]byte("*2\r\n" + serialize(longitudeStr) + serialize(latitudeStr)))
+		if err != nil {
+			// handle error
+			return err
+		}
+	}
+	return nil
 }
