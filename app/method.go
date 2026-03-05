@@ -1383,6 +1383,10 @@ func (c *Conn) runZCARD(args []string) error {
 	return err
 }
 
+// readScore carries the score read from sortedSets during silent mode, which is
+// prepared for GEOPOS
+var readScore float64
+
 func (c *Conn) runZSCORE(args []string) error {
 	if len(args) != 2 {
 		// usage: <sorted set name> <element name>
@@ -1398,6 +1402,9 @@ func (c *Conn) runZSCORE(args []string) error {
 			score = elem.score
 			break
 		}
+	}
+	if c.silent {
+		readScore = score
 	}
 	mu.Unlock()
 	if score == MagicNum {
@@ -1432,7 +1439,6 @@ func (c *Conn) runZREM(args []string) error {
 }
 
 func (c *Conn) runGEOADD(args []string) error {
-	// to be implemented
 	if len(args) != 4 {
 		// usage: <key> <longitude> <latitude> <member>
 		return fmt.Errorf("GEOADD: argument count mismatch")
@@ -1470,5 +1476,28 @@ func (c *Conn) runGEOADD(args []string) error {
 	c.silent = false
 
 	_, err = c.write([]byte(":1\r\n"))
+	return err
+}
+
+func (c *Conn) runGEOPOS(args []string) error {
+	if len(args) != 2 {
+		// usage: <key> <location>
+		return fmt.Errorf("GEOPOS: argument count mismatch")
+	}
+
+	mu.Lock()
+	// fetch score
+	c.silent = true
+	err := c.runZSCORE(args)
+	if err != nil {
+		// handle error
+		return err
+	}
+	c.silent = false
+	mu.Unlock()
+	longitude, latitude := decodeScore(readScore)
+	longitudeStr := strconv.FormatFloat(longitude, 'g', -1, 64)
+	latitudeStr := strconv.FormatFloat(latitude, 'g', -1, 64)
+	_, err = c.write([]byte("*2\r\n" + serialize(longitudeStr) + serialize(latitudeStr)))
 	return err
 }

@@ -613,20 +613,20 @@ func interleave(normalLongitude, normalLatitude int) int64 {
 	return i64Latitude | i64Longitude
 }
 
+// longitude and latitude range
+const (
+	MaxLongitude = 180
+	MinLongitude = -180
+	MaxLatitude  = 85.05112878
+	MinLatitude  = -MaxLatitude
+
+	LongitudeRange = MaxLongitude - MinLongitude
+	LatitudeRange  = MaxLatitude - MinLatitude
+)
+
 // calculateScore converts longitude and latitude into score in sorted sets
 func calculateScore(longitude, latitude float64) (score float64) {
 	// Step 1: normalize longitude and latitude
-	// longitude and latitude range
-	const (
-		MaxLongitude = 180
-		MinLongitude = -180
-		MaxLatitude  = 85.05112878
-		MinLatitude  = -MaxLatitude
-
-		LongitudeRange = MaxLongitude - MinLongitude
-		LatitudeRange  = MaxLatitude - MinLatitude
-	)
-
 	normalizedLongitude := 1 << 26 * (longitude - MinLongitude) / LongitudeRange
 	normalizedLatitude := 1 << 26 * (latitude - MinLatitude) / LatitudeRange
 
@@ -636,4 +636,44 @@ func calculateScore(longitude, latitude float64) (score float64) {
 
 	// Step3: interleaving normal values to a 64-bit integer
 	return float64(interleave(normalizedLongitudeI, normalizedLatitudeI))
+}
+
+// compact compacts int64 value into int32
+func compact(v int64) int {
+	// only keep the bits on even positions
+	v &= 0x5555555555555555
+
+	// Before masking: w1   v1  ...   w2   v16  ... w31  v31  w32  v32
+	// After masking: 0   v1  ...   0   v16  ... 0  v31  0  v32
+	// reverse from spread
+	v = (v | (v >> 1)) & 0x3333333333333333
+	v = (v | (v >> 2)) & 0x0F0F0F0F0F0F0F0F
+	v = (v | (v >> 4)) & 0x00FF00FF00FF00FF
+	v = (v | (v >> 8)) & 0x0000FFFF0000FFFF
+	v = (v | (v >> 16)) & 0x00000000FFFFFFFF
+
+	// convert to int32
+	return int(v & 0xFFFFFFFF)
+}
+
+func convertGridNumbersToCoordinates(i64Longitude, i64Latitude int64) (float64, float64) {
+	gridLongitude, gridLatitude := compact(i64Longitude), compact(i64Latitude)
+
+	gridLongitudeMin := MinLongitude + LongitudeRange*(float64(gridLongitude)/(1<<26))
+	gridLongitudeMax := MinLongitude + LongitudeRange*(float64(gridLongitude+1)/(1<<26))
+	gridLatitudeMin := MinLatitude + LatitudeRange*(float64(gridLatitude)/(1<<26))
+	gridLatitudeMax := MinLatitude + LatitudeRange*(float64(gridLatitude+1)/(1<<26))
+
+	longitude := (gridLongitudeMin + gridLongitudeMax) / 2
+	latitude := (gridLatitudeMin + gridLatitudeMax) / 2
+	return longitude, latitude
+}
+
+func decodeScore(score float64) (longitude, latitude float64) {
+	// Step1: extract longitude, latitude bits
+	i64Longitude, i64Latitude := int64(score)>>1, int64(score)
+	// Step2: compacting (in convertGridNUmbersToCoordinates)
+	// Step3: Converting back
+	longitude, latitude = convertGridNumbersToCoordinates(i64Longitude, i64Latitude)
+	return
 }
