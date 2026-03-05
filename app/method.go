@@ -1491,7 +1491,7 @@ func (c *Conn) runGEOPOS(args []string) error {
 	if err != nil {
 		// handle error
 		c.silent = false
-		return err
+		//return err
 	}
 	c.silent = false
 	longitude, latitude := decodeScore(readScore)
