@@ -1436,6 +1436,25 @@ func (c *Conn) runGEOADD(args []string) error {
 		return fmt.Errorf("GEOADD: argument count mismatch")
 	}
 
-	_, err := c.write([]byte(":1\r\n"))
+	longitude, err := strconv.ParseFloat(args[1], 64)
+	if err != nil {
+		// handle error
+		return err
+	}
+	latitude, err := strconv.ParseFloat(args[2], 64)
+	if err != nil {
+		// handle error
+		return err
+	}
+
+	const MaxLatitude = 85.05112878
+	// validate longitude and latitude
+	if math.Abs(longitude) > 180 || math.Abs(latitude) > MaxLatitude {
+		errMsg := fmt.Sprintf("-ERR invalid longitude,latitude pair %f,%f", longitude, latitude)
+		_, err = c.write([]byte(errMsg))
+		return err
+	}
+
+	_, err = c.write([]byte(":1\r\n"))
 	return err
 }
