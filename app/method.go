@@ -1480,10 +1480,10 @@ func (c *Conn) runGEOADD(args []string) error {
 }
 
 func (c *Conn) runGEOPOS(args []string) error {
-	if len(args) != 2 {
+	/*if len(args) != 2 {
 		// usage: <key> <location>
 		return fmt.Errorf("GEOPOS: argument count mismatch")
-	}
+	}*/
 
 	// fetch score
 	c.silent = true
@@ -1493,7 +1493,6 @@ func (c *Conn) runGEOPOS(args []string) error {
 		return err
 	}
 	c.silent = false
-	_, _ = c.write([]byte("ZSCORE failed"))
 	longitude, latitude := decodeScore(readScore)
 	longitudeStr := strconv.FormatFloat(longitude, 'g', -1, 64)
 	latitudeStr := strconv.FormatFloat(latitude, 'g', -1, 64)
