@@ -1428,3 +1428,14 @@ func (c *Conn) runZREM(args []string) error {
 	_, err := c.write([]byte(fmt.Sprintf(":%d\r\n", removed)))
 	return err
 }
+
+func (c *Conn) runGEOADD(args []string) error {
+	// to be implemented
+	if len(args) != 4 {
+		// usage: <key> <longitude> <latitude> <member>
+		return fmt.Errorf("GEOADD: argument count mismatch")
+	}
+
+	_, err := c.write([]byte(":1\r\n"))
+	return err
+}
