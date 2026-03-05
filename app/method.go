@@ -1422,6 +1422,8 @@ func (c *Conn) runZREM(args []string) error {
 			// remove this elem
 			removed = 1
 			sortedSets[args[0]] = append(sortedSets[args[0]][:i], sortedSets[args[0]][i+1:]...)
+			// remember to break, or we'll encounter delete-on-iterate
+			break
 		}
 	}
 	mu.Unlock()
