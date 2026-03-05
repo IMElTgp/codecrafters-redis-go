@@ -1493,6 +1493,7 @@ func (c *Conn) runGEOPOS(args []string) error {
 		return err
 	}
 	c.silent = false
+	_, _ = c.write([]byte("ZSCORE failed"))
 	longitude, latitude := decodeScore(readScore)
 	longitudeStr := strconv.FormatFloat(longitude, 'g', -1, 64)
 	latitudeStr := strconv.FormatFloat(latitude, 'g', -1, 64)
