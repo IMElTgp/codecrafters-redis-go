@@ -1488,9 +1488,7 @@ func (c *Conn) runGEOPOS(args []string) error {
 		if err != nil {
 			// handle error
 			c.silent = false
-			//return err
-			scores = append(scores, float64(-1))
-			continue
+			return err
 		}
 		c.silent = false
 		score := readScore
@@ -1501,7 +1499,7 @@ func (c *Conn) runGEOPOS(args []string) error {
 		longitude, latitude := decodeScore(score)
 		longitudeStr := strconv.FormatFloat(longitude, 'g', -1, 64)
 		latitudeStr := strconv.FormatFloat(latitude, 'g', -1, 64)
-		if score == -1 {
+		if score == 0xABCDABCD { // MagicNum
 			bulkStrs = append(bulkStrs, "*1\r\n*-1\r\n")
 			continue
 		}
