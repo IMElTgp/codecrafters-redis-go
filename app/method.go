@@ -1496,19 +1496,25 @@ func (c *Conn) runGEOPOS(args []string) error {
 		score := readScore
 		scores = append(scores, score)
 	}
+	bulkStrs := []string{}
 	for _, score := range scores {
 		longitude, latitude := decodeScore(score)
 		longitudeStr := strconv.FormatFloat(longitude, 'g', -1, 64)
 		latitudeStr := strconv.FormatFloat(latitude, 'g', -1, 64)
 		if score == -1 {
-			_, err := c.write([]byte("*1\r\n*-1\r\n"))
-			if err != nil {
-				// handle error
-				return err
-			}
+			bulkStrs = append(bulkStrs, "*1\r\n*-1\r\n")
 			continue
 		}
-		_, err := c.write([]byte("*2\r\n" + serialize(longitudeStr) + serialize(latitudeStr)))
+		bulkStrs = append(bulkStrs, "*2\r\n"+serialize(longitudeStr)+serialize(latitudeStr))
+	}
+
+	_, err := c.write([]byte("*" + strconv.Itoa(len(bulkStrs)) + "\r\n"))
+	if err != nil {
+		// handle error
+		return err
+	}
+	for _, str := range bulkStrs {
+		_, err = c.write([]byte(str))
 		if err != nil {
 			// handle error
 			return err
