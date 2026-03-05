@@ -1499,10 +1499,10 @@ func (c *Conn) runGEOPOS(args []string) error {
 		longitude, latitude := decodeScore(score)
 		longitudeStr := strconv.FormatFloat(longitude, 'g', -1, 64)
 		latitudeStr := strconv.FormatFloat(latitude, 'g', -1, 64)
-		if score == 0xABCDABCD { // MagicNum
-			bulkStrs = append(bulkStrs, "*1\r\n*-1\r\n")
-			continue
-		}
+			if score == 0xABCDABCD { // MagicNum
+				bulkStrs = append(bulkStrs, "*-1\r\n")
+				continue
+			}
 		bulkStrs = append(bulkStrs, "*2\r\n"+serialize(longitudeStr)+serialize(latitudeStr))
 	}
 
