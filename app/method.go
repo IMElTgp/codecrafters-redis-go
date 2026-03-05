@@ -1457,6 +1457,12 @@ func (c *Conn) runGEOADD(args []string) error {
 		return err
 	}
 
+	err = c.runZADD([]string{args[0], "0", args[3]})
+	if err != nil {
+		// handle error
+		return err
+	}
+
 	_, err = c.write([]byte(":1\r\n"))
 	return err
 }
