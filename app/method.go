@@ -1482,11 +1482,12 @@ func (c *Conn) runGEOADD(args []string) error {
 func (c *Conn) runGEOPOS(args []string) error {
 	scores := []float64{}
 	for i := 1; i < len(args); i++ {
-		// fetch score
+		// silently fetch score
 		c.silent = true
 		err := c.runZSCORE([]string{args[0], args[i]})
 		if err != nil {
 			// handle error
+			// remember to quit silent mode before exiting
 			c.silent = false
 			return err
 		}
@@ -1496,16 +1497,19 @@ func (c *Conn) runGEOPOS(args []string) error {
 	}
 	bulkStrs := []string{}
 	for _, score := range scores {
+		// given decoding algorithm
 		longitude, latitude := decodeScore(score)
 		longitudeStr := strconv.FormatFloat(longitude, 'g', -1, 64)
 		latitudeStr := strconv.FormatFloat(latitude, 'g', -1, 64)
-			if score == 0xABCDABCD { // MagicNum
-				bulkStrs = append(bulkStrs, "*-1\r\n")
-				continue
-			}
+		if score == 0xABCDABCD { // MagicNum
+			// if not found, return null string
+			bulkStrs = append(bulkStrs, "*-1\r\n")
+			continue
+		}
 		bulkStrs = append(bulkStrs, "*2\r\n"+serialize(longitudeStr)+serialize(latitudeStr))
 	}
 
+	// array of bulk strings
 	_, err := c.write([]byte("*" + strconv.Itoa(len(bulkStrs)) + "\r\n"))
 	if err != nil {
 		// handle error
