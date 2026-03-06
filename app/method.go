@@ -1686,6 +1686,7 @@ func (c *Conn) runAUTH(args []string) error {
 	}
 	mu.Lock()
 	if args[1] == userDB[args[0]] {
+		// After AUTH, this client connection is considered as authenticated
 		authenticated[c.Conn] = true
 		mu.Unlock()
 		_, err := c.write([]byte("+OK\r\n"))

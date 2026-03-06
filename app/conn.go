@@ -66,6 +66,12 @@ func handleConn(c *Conn) {
 		"INCR":  true,
 	}
 
+	mustMULTI := func(args []string) error {
+		var err error
+		cmdQueue, err = c.processMULTI(cmdQueue, args)
+		return err
+	}
+
 	for {
 		// for multiple commands in a line, which I haven't seen in test cases
 		n, err := c.Conn.Read(buffer)
@@ -158,35 +164,27 @@ func handleConn(c *Conn) {
 			switch strings.ToUpper(args[0]) {
 			case "PING":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
 				}
 				if c.runPING() != nil {
-					// handle error
 					return
 				}
 			case "ECHO":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
 				}
 				if c.runECHO(args[1:]) != nil {
-					// handle error
 					return
 				}
 			case "SET":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -197,9 +195,7 @@ func handleConn(c *Conn) {
 				}
 			case "GET":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -210,9 +206,7 @@ func handleConn(c *Conn) {
 				}
 			case "RPUSH":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -222,9 +216,7 @@ func handleConn(c *Conn) {
 				}
 			case "LPUSH":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -234,9 +226,7 @@ func handleConn(c *Conn) {
 				}
 			case "LRANGE":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -246,9 +236,7 @@ func handleConn(c *Conn) {
 				}
 			case "LLEN":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -258,9 +246,7 @@ func handleConn(c *Conn) {
 				}
 			case "LPOP":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -270,9 +256,7 @@ func handleConn(c *Conn) {
 				}
 			case "BLPOP":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -282,9 +266,7 @@ func handleConn(c *Conn) {
 				}
 			case "TYPE":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -294,9 +276,7 @@ func handleConn(c *Conn) {
 				}
 			case "XADD":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -306,9 +286,7 @@ func handleConn(c *Conn) {
 				}
 			case "XRANGE":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -318,9 +296,7 @@ func handleConn(c *Conn) {
 				}
 			case "XREAD":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -330,9 +306,7 @@ func handleConn(c *Conn) {
 				}
 			case "INCR":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -342,9 +316,7 @@ func handleConn(c *Conn) {
 				}
 			case "MULTI":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -392,9 +364,7 @@ func handleConn(c *Conn) {
 				}
 			case "INFO":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -404,9 +374,7 @@ func handleConn(c *Conn) {
 				}
 			case "REPLCONF":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -416,9 +384,7 @@ func handleConn(c *Conn) {
 				}
 			case "PSYNC":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -428,9 +394,7 @@ func handleConn(c *Conn) {
 				}
 			case "WAIT":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -440,9 +404,7 @@ func handleConn(c *Conn) {
 				}
 			case "CONFIG":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -452,9 +414,7 @@ func handleConn(c *Conn) {
 				}
 			case "KEYS":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -464,9 +424,7 @@ func handleConn(c *Conn) {
 				}
 			case "SUBSCRIBE":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -476,9 +434,7 @@ func handleConn(c *Conn) {
 				}
 			case "PUBLISH":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -488,9 +444,7 @@ func handleConn(c *Conn) {
 				}
 			case "UNSUBSCRIBE":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -500,9 +454,7 @@ func handleConn(c *Conn) {
 				}
 			case "ZADD":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -512,9 +464,7 @@ func handleConn(c *Conn) {
 				}
 			case "ZRANK":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -524,9 +474,7 @@ func handleConn(c *Conn) {
 				}
 			case "ZRANGE":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -536,9 +484,7 @@ func handleConn(c *Conn) {
 				}
 			case "ZCARD":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -548,9 +494,7 @@ func handleConn(c *Conn) {
 				}
 			case "ZSCORE":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -560,9 +504,7 @@ func handleConn(c *Conn) {
 				}
 			case "ZREM":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -572,9 +514,7 @@ func handleConn(c *Conn) {
 				}
 			case "GEOADD":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -584,9 +524,7 @@ func handleConn(c *Conn) {
 				}
 			case "GEOPOS":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -596,9 +534,7 @@ func handleConn(c *Conn) {
 				}
 			case "GEODIST":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -608,9 +544,7 @@ func handleConn(c *Conn) {
 				}
 			case "GEOSEARCH":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -620,9 +554,7 @@ func handleConn(c *Conn) {
 				}
 			case "ACL":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
@@ -632,9 +564,7 @@ func handleConn(c *Conn) {
 				}
 			case "AUTH":
 				if multi {
-					cmdQueue, err = c.processMULTI(cmdQueue, args)
-					if err != nil {
-						// handle error
+					if mustMULTI(args) != nil {
 						return
 					}
 					goto skip
