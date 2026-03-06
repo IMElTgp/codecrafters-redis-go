@@ -1556,3 +1556,51 @@ func (c *Conn) runGEODIST(args []string) error {
 	_, err := c.write([]byte(serialize(strconv.FormatFloat(dist, 'g', -1, 64))))
 	return err
 }
+
+func (c *Conn) runGEOSEARCH(args []string) error {
+	if len(args) != 6 {
+		// usage: <key> FROMLONLAT <lon> <lat> BYRADIUS <radius>
+		return fmt.Errorf("GEOSEARCH: argument count mismatch")
+	}
+
+	givenLon, err := strconv.ParseFloat(args[2], 64)
+	if err != nil {
+		// handle error
+		return err
+	}
+	givenLat, err := strconv.ParseFloat(args[3], 64)
+	if err != nil {
+		// handle error
+		return err
+	}
+	radius, err := strconv.ParseFloat(args[5], 64)
+	if err != nil {
+		// handle error
+		return err
+	}
+	permittedLocations := make([]string, 0)
+
+	mu.Lock()
+	for _, elem := range sortedSets[args[0]] {
+		longitude, latitude := decodeScore(elem.score)
+		dist := hsDist(degPos(latitude, longitude), degPos(givenLat, givenLon))
+		if dist <= radius {
+			// with the radius
+			permittedLocations = append(permittedLocations, elem.name)
+		}
+	}
+	mu.Unlock()
+	_, err = c.write([]byte(fmt.Sprintf("*%d\r\n", len(permittedLocations))))
+	if err != nil {
+		// handle error
+		return err
+	}
+	for _, loc := range permittedLocations {
+		_, err = c.write([]byte(serialize(loc)))
+		if err != nil {
+			// handle error
+			return err
+		}
+	}
+	return nil
+}
