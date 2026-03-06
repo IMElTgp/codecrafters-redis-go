@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"math"
@@ -1628,10 +1629,13 @@ func (c *Conn) runWHOAMI(args []string) error {
 }
 
 func (c *Conn) runGETUSER(args []string) error {
-	if len(args) != 1 {
-		// usage: <user>
-		return fmt.Errorf("GETUSER: argument count mismatch")
+	password := ""
+	if len(args) > 1 && strings.HasPrefix(args[1], ">") {
+		// password set
+		password = args[1][1:]
 	}
-	_, err := c.write([]byte("*4\r\n" + serialize("flags") + "*1\r\n" + serialize("nopass") + serialize("passwords") + "*0\r\n"))
+	sum := sha256.Sum256([]byte(password))
+	passwordSHA256 := string(sum[:])
+	_, err := c.write([]byte("*4\r\n" + serialize("flags") + "*1\r\n" + serialize("nopass") + serialize("passwords") + "*1\r\n" + serialize(passwordSHA256)))
 	return err
 }
