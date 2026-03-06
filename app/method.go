@@ -1629,13 +1629,15 @@ func (c *Conn) runWHOAMI(args []string) error {
 }
 
 func (c *Conn) runGETUSER(args []string) error {
+	nopass := 0
 	password := ""
 	if len(args) > 1 && strings.HasPrefix(args[1], ">") {
 		// password set
 		password = args[1][1:]
+		nopass = 1
 	}
 	sum := sha256.Sum256([]byte(password))
 	passwordSHA256 := string(sum[:])
-	_, err := c.write([]byte("*4\r\n" + serialize("flags") + "*1\r\n" + serialize("nopass") + serialize("passwords") + "*1\r\n" + serialize(passwordSHA256)))
+	_, err := c.write([]byte("*4\r\n" + serialize("flags") + "*1\r\n" + serialize("nopass") + serialize("passwords") + "*" + strconv.Itoa(nopass) + "\r\n" + serialize(passwordSHA256)))
 	return err
 }
