@@ -1675,6 +1675,7 @@ func (c *Conn) runAUTH(args []string) error {
 	}
 	mu.Lock()
 	if args[1] == userDB[args[0]] {
+		mu.Unlock()
 		_, err := c.write([]byte("+OK\r\n"))
 		return err
 	}
