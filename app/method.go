@@ -1627,7 +1627,6 @@ func (c *Conn) runWHOAMI(args []string) error {
 	if len(args) > 0 {
 		// ignore
 	}
-
 	mu.Lock()
 	// if password set, need authentication
 	if !authenticated[c.Conn] && userDB["default"] != "" {
