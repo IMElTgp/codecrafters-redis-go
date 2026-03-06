@@ -1642,6 +1642,7 @@ func (c *Conn) runGETUSER(args []string) error {
 	}
 	mu.Unlock()
 	sum := sha256.Sum256([]byte(password))
+	// the SHA256 should be encoded to hex string (lower cases)
 	passwordSHA256 := hex.EncodeToString(sum[:])
 	msg := "*4\r\n" + serialize("flags")
 	if pass == 0 {
@@ -1660,8 +1661,24 @@ func (c *Conn) runGETUSER(args []string) error {
 func (c *Conn) runSETUSER(args []string) error {
 	// set silently
 	mu.Lock()
+	// register password
 	userDB[args[0]] = args[1][1:]
 	mu.Unlock()
 	_, err := c.write([]byte("+OK\r\n"))
+	return err
+}
+
+func (c *Conn) runAUTH(args []string) error {
+	if len(args) != 2 {
+		// usage: <user> <password>
+		return fmt.Errorf("AUTH: found extra data: %v", args[2:])
+	}
+	mu.Lock()
+	if args[1] == userDB[args[0]] {
+		_, err := c.write([]byte("+OK\r\n"))
+		return err
+	}
+	mu.Unlock()
+	_, err := c.write([]byte("-ERR WRONGPASS invalid username-password pair or user is disabled."))
 	return err
 }
