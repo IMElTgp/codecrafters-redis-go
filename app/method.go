@@ -1627,6 +1627,16 @@ func (c *Conn) runWHOAMI(args []string) error {
 	if len(args) > 0 {
 		// ignore
 	}
+
+	mu.Lock()
+	if !authenticated[c.Conn] {
+		mu.Unlock()
+		// not authenticated, banned
+		_, err := c.write([]byte("-NOAUTH Authentication required.\r\n"))
+		return err
+	}
+	mu.Unlock()
+
 	_, err := c.write([]byte(serialize("default")))
 	return err
 }
@@ -1663,6 +1673,7 @@ func (c *Conn) runSETUSER(args []string) error {
 	mu.Lock()
 	// register password
 	userDB[args[0]] = args[1][1:]
+	authenticated[c.Conn] = true
 	mu.Unlock()
 	_, err := c.write([]byte("+OK\r\n"))
 	return err

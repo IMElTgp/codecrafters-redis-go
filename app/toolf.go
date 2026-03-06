@@ -117,6 +117,11 @@ var storedElements = make(map[sortedSetLocator]bool)
 // userDB is a map from user to password(NOT SHA256) (string <-> string)
 var userDB = make(map[string]string)
 
+// authenticated is a map from net.Conn to boolean which represents whether a
+// connection has authenticated via SETUSER, and depending on that take decisions
+// whether to ask for authentication during WHOAMI
+var authenticated = make(map[net.Conn]bool)
+
 // tool function for getting list copy from Map
 func getCopy(key string) ([]any, error) {
 	list, ok := lists.Load(key)
