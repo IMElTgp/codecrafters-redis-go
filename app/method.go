@@ -1629,7 +1629,8 @@ func (c *Conn) runWHOAMI(args []string) error {
 	}
 
 	mu.Lock()
-	if !authenticated[c.Conn] {
+	// if password set, need authentication
+	if !authenticated[c.Conn] && userDB["default"] != "" {
 		mu.Unlock()
 		// not authenticated, banned
 		_, err := c.write([]byte("-NOAUTH Authentication required.\r\n"))
