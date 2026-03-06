@@ -1633,11 +1633,13 @@ func (c *Conn) runWHOAMI(args []string) error {
 func (c *Conn) runGETUSER(args []string) error {
 	pass := 0
 	password := ""
-	if len(args) > 1 && strings.HasPrefix(args[1], ">") {
-		// password set
-		password = args[1][1:]
+	mu.Lock()
+	if userDB[args[0]] != "" {
+		// has password
 		pass = 1
+		password = userDB[args[0]]
 	}
+	mu.Unlock()
 	sum := sha256.Sum256([]byte(password))
 	passwordSHA256 := string(sum[:])
 	msg := "*4\r\n" + serialize("flags")
@@ -1656,14 +1658,9 @@ func (c *Conn) runGETUSER(args []string) error {
 
 func (c *Conn) runSETUSER(args []string) error {
 	// set silently
-	c.silent = true
-	err := c.runGETUSER(args)
-	if err != nil {
-		// handle error
-		c.silent = false
-		return err
-	}
-	c.silent = false
-	_, err = c.write([]byte("+OK\r\n"))
+	mu.Lock()
+	userDB[args[0]] = args[1][1:]
+	mu.Unlock()
+	_, err := c.write([]byte("+OK\r\n"))
 	return err
 }

@@ -114,6 +114,9 @@ type sortedSetLocator struct {
 // storedElements stores element names which have been stored in sortedSets
 var storedElements = make(map[sortedSetLocator]bool)
 
+// userDB is a map from user to password(NOT SHA256) (string <-> string)
+var userDB = make(map[string]string)
+
 // tool function for getting list copy from Map
 func getCopy(key string) ([]any, error) {
 	list, ok := lists.Load(key)
