@@ -1494,6 +1494,7 @@ func (c *Conn) runGEOPOS(args []string) error {
 		c.silent = false
 		score := readScore
 		scores = append(scores, score)
+		readScore = 0xABCDABCD // MagicNum
 	}
 	bulkStrs := []string{}
 	for _, score := range scores {
@@ -1523,4 +1524,35 @@ func (c *Conn) runGEOPOS(args []string) error {
 		}
 	}
 	return nil
+}
+
+func (c *Conn) runGEODIST(args []string) error {
+	if len(args) != 3 {
+		// usage: <key> <location_1> <location_2>
+		return fmt.Errorf("GEODIST: argument count mismatch")
+	}
+	var (
+		longitudes, latitudes []float64
+	)
+	for i := 1; i < len(args); i++ {
+		// silently fetch score
+		c.silent = true
+		err := c.runZSCORE([]string{args[0], args[i]})
+		if err != nil {
+			// handle error
+			c.silent = false
+			return err
+		}
+		c.silent = false
+		score := readScore
+		readScore = 0xABCDABCD // MagicNum
+		// parse longitude and latitude
+		longitude, latitude := decodeScore(score)
+		longitudes = append(longitudes, longitude)
+		latitudes = append(latitudes, latitude)
+	}
+	// latitude first
+	dist := hsDist(degPos(latitudes[0], longitudes[0]), degPos(latitudes[1], longitudes[1]))
+	_, err := c.write([]byte(strconv.FormatFloat(dist, 'g', -1, 64)))
+	return err
 }
