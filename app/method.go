@@ -1632,6 +1632,6 @@ func (c *Conn) runGETUSER(args []string) error {
 		// usage: <user>
 		return fmt.Errorf("GETUSER: argument count mismatch")
 	}
-	_, err := c.write([]byte("*4\r\n" + serialize("flags") + "*1\r\n" + serialize("nopass") + serialize("password") + "*0\r\n"))
+	_, err := c.write([]byte("*4\r\n" + serialize("flags") + "*1\r\n" + serialize("nopass") + serialize("passwords") + "*0\r\n"))
 	return err
 }
