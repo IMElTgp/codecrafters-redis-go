@@ -1552,7 +1552,8 @@ func (c *Conn) runGEODIST(args []string) error {
 		latitudes = append(latitudes, latitude)
 	}
 	// latitude first
-	dist := hsDist(degPos(latitudes[0], longitudes[0]), degPos(latitudes[1], longitudes[1]))
+	// divide by 1000 since hsDist returns kilometer instead of meter
+	dist := hsDist(degPos(latitudes[0], longitudes[0]), degPos(latitudes[1], longitudes[1])) / 1000
 	_, err := c.write([]byte(serialize(strconv.FormatFloat(dist, 'g', -1, 64))))
 	return err
 }
