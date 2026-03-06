@@ -1640,7 +1640,13 @@ func (c *Conn) runGETUSER(args []string) error {
 	}
 	sum := sha256.Sum256([]byte(password))
 	passwordSHA256 := string(sum[:])
-	msg := "*4\r\n" + serialize("flags") + "*1\r\n" + serialize("nopass") + serialize("passwords") + "*" + strconv.Itoa(pass) + "\r\n"
+	msg := "*4\r\n" + serialize("flags")
+	if pass == 0 {
+		msg += "*1\r\n" + serialize("nopass")
+	} else {
+		msg += "*0\r\n"
+	}
+	msg += serialize("passwords") + "*" + strconv.Itoa(pass) + "\r\n"
 	if pass == 1 {
 		msg += serialize(passwordSHA256)
 	}
