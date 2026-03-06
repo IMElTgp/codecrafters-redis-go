@@ -1604,3 +1604,23 @@ func (c *Conn) runGEOSEARCH(args []string) error {
 	}
 	return nil
 }
+
+func (c *Conn) runACL(args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("ACL: empty argument list")
+	}
+	switch args[0] {
+	case "WHOAMI":
+		return c.runWHOAMI(args[1:])
+	}
+	return nil
+}
+
+func (c *Conn) runWHOAMI(args []string) error {
+	// expected no arguments
+	if len(args) > 0 {
+		// ignore
+	}
+	_, err := c.write([]byte(serialize("default")))
+	return err
+}
