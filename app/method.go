@@ -1615,6 +1615,8 @@ func (c *Conn) runACL(args []string) error {
 		return c.runWHOAMI(args[1:])
 	case "GETUSER":
 		return c.runGETUSER(args[1:])
+	case "SETUSER":
+		return c.runSETUSER(args[1:])
 	}
 	return nil
 }
@@ -1643,5 +1645,19 @@ func (c *Conn) runGETUSER(args []string) error {
 		msg += serialize(passwordSHA256)
 	}
 	_, err := c.write([]byte(msg))
+	return err
+}
+
+func (c *Conn) runSETUSER(args []string) error {
+	// set silently
+	c.silent = true
+	err := c.runGETUSER(args)
+	if err != nil {
+		// handle error
+		c.silent = false
+		return err
+	}
+	c.silent = false
+	_, err = c.write([]byte("+OK\r\n"))
 	return err
 }
