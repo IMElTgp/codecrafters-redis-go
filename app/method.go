@@ -1558,8 +1558,8 @@ func (c *Conn) runGEODIST(args []string) error {
 }
 
 func (c *Conn) runGEOSEARCH(args []string) error {
-	if len(args) != 6 {
-		// usage: <key> FROMLONLAT <lon> <lat> BYRADIUS <radius>
+	if len(args) != 7 {
+		// usage: <key> FROMLONLAT <lon> <lat> BYRADIUS <radius> m
 		return fmt.Errorf("GEOSEARCH: argument count mismatch")
 	}
 
