@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"math"
 	"net"
@@ -1641,7 +1642,7 @@ func (c *Conn) runGETUSER(args []string) error {
 	}
 	mu.Unlock()
 	sum := sha256.Sum256([]byte(password))
-	passwordSHA256 := string(sum[:])
+	passwordSHA256 := hex.EncodeToString(sum[:])
 	msg := "*4\r\n" + serialize("flags")
 	if pass == 0 {
 		msg += "*1\r\n" + serialize("nopass")
