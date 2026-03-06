@@ -1,33 +1,43 @@
-[![progress-banner](https://backend.codecrafters.io/progress/redis/294c1504-832f-4f6a-b20b-705d6b5a02f0)](https://app.codecrafters.io/users/codecrafters-bot?r=2qF)
+## Redis Clone in Go
 
-This is a starting point for Go solutions to the
-["Build Your Own Redis" Challenge](https://codecrafters.io/challenges/redis).
+This repository contains my implementation for the
+["Build Your Own Redis" Challenge](https://codecrafters.io/challenges/redis),
+written in Go.
 
-In this challenge, you'll build a toy Redis clone that's capable of handling
-basic commands like `PING`, `SET` and `GET`. Along the way we'll learn about
-event loops, the Redis protocol and more.
+## Work I've Done
 
-**Note**: If you're viewing this repo on GitHub, head over to
-[codecrafters.io](https://codecrafters.io) to try the challenge.
+- Implemented a TCP server with concurrent connection handling and RESP parsing.
+- Implemented core string commands: `PING`, `ECHO`, `SET`, `GET`, `INCR`, `TYPE`, `KEYS`.
+- Added key expiry handling (`EX` / `PX`) and in-memory expiration checks.
+- Implemented list commands: `RPUSH`, `LPUSH`, `LRANGE`, `LLEN`, `LPOP`, `BLPOP`.
+- Implemented stream commands: `XADD`, `XRANGE`, `XREAD` (including blocking behavior).
+- Implemented transactions: `MULTI`, `EXEC`, `DISCARD`.
+- Implemented pub/sub basics: `SUBSCRIBE`, `PUBLISH`, `UNSUBSCRIBE`.
+- Implemented replication workflow:
+  - `--replicaof` startup mode and handshake (`PING`, `REPLCONF`, `PSYNC`)
+  - write command propagation from master to replicas
+  - replica ACK tracking and `WAIT`
+- Implemented config/introspection commands: `INFO`, `CONFIG GET`.
+- Implemented RDB loading support from `--dir` and `--dbfilename` on startup.
+- Implemented sorted set and geo command subsets:
+  - Sorted set: `ZADD`, `ZRANK`, `ZRANGE`, `ZCARD`, `ZSCORE`, `ZREM`
+  - Geo: `GEOADD`, `GEOPOS`, `GEODIST`, `GEOSEARCH`
+- Implemented auth/ACL subset: `AUTH`, `ACL WHOAMI`, `ACL GETUSER`, `ACL SETUSER`.
 
-# Passing the first stage
-
-The entry point for your Redis implementation is in `app/main.go`. Study and
-uncomment the relevant code, and push your changes to pass the first stage:
+## Run Locally
 
 ```sh
-git commit -am "pass 1st stage" # any msg
-git push origin master
+./your_program.sh
 ```
 
-That's all!
+Default port is `6379`. You can also run with:
 
-# Stage 2 & beyond
+```sh
+./your_program.sh --port 6380 --dir /path/to/rdb --dbfilename dump.rdb
+./your_program.sh --port 6381 --replicaof "127.0.0.1 6379"
+```
 
-Note: This section is for stages 2 and beyond.
+## Notes
 
-1. Ensure you have `go (1.25)` installed locally
-1. Run `./your_program.sh` to run your Redis server, which is implemented in
-   `app/main.go`.
-1. Commit your changes and run `git push origin master` to submit your solution
-   to CodeCrafters. Test output will be streamed to your terminal.
+This project aims to cover challenge stages incrementally and focuses on
+correct protocol behavior for the implemented command subset.
