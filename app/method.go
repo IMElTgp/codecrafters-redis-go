@@ -1612,6 +1612,8 @@ func (c *Conn) runACL(args []string) error {
 	switch args[0] {
 	case "WHOAMI":
 		return c.runWHOAMI(args[1:])
+	case "GETUSER":
+		return c.runGETUSER(args[1:])
 	}
 	return nil
 }
@@ -1622,5 +1624,14 @@ func (c *Conn) runWHOAMI(args []string) error {
 		// ignore
 	}
 	_, err := c.write([]byte(serialize("default")))
+	return err
+}
+
+func (c *Conn) runGETUSER(args []string) error {
+	if len(args) != 1 {
+		// usage: <user>
+		return fmt.Errorf("GETUSER: argument count mismatch")
+	}
+	_, err := c.write([]byte("*2\r\n" + serialize("default") + serialize("")))
 	return err
 }
