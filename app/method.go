@@ -1680,6 +1680,6 @@ func (c *Conn) runAUTH(args []string) error {
 		return err
 	}
 	mu.Unlock()
-	_, err := c.write([]byte("-ERR WRONGPASS invalid username-password pair or user is disabled."))
+	_, err := c.write([]byte("-ERR WRONGPASS invalid username-password pair or user is disabled.\r\n"))
 	return err
 }
