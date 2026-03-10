@@ -847,16 +847,16 @@ func (c *Conn) runXREAD(args []string) error {
 			select {
 			case <-ch:
 				mu.Lock()
-				// FUCKING REMEMBER THAT STREAM SHOULD BE UPDATED
+				// REMEMBER THAT STREAM SHOULD BE UPDATED
 				streamRaw, ok = streams.Load(q[0])
 				if !ok {
 					mu.Unlock()
-					return fmt.Errorf("GO EAT SHIT")
+					return fmt.Errorf("")
 				}
 				stream, ok = streamRaw.(Stream)
 				if !ok {
 					mu.Unlock()
-					return fmt.Errorf("GO EAT SHIT")
+					return fmt.Errorf("")
 				}
 				// update the begining index, don't let it be sort.Search's error code as we will fallthrough to normal path
 				lo = sort.Search(len(stream), func(i int) bool {
